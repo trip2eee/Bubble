@@ -7,10 +7,4 @@
     android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
     tools:context=".GameActivity">
 
-        <com.example.bubble.GameView
-            android:id="@+id/viewGame"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:clickable="true"/>
-
 </androidx.constraintlayout.widget.ConstraintLayout>
