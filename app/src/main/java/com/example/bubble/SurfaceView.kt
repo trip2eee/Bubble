@@ -3,6 +3,9 @@ package com.example.bubble
 import android.content.Context
 import android.opengl.GLSurfaceView
 import android.view.MotionEvent
+import kotlin.math.atan2
+import kotlin.math.max
+import kotlin.math.min
 
 class SurfaceView(context:Context) : GLSurfaceView(context) {
 
@@ -36,20 +39,13 @@ class SurfaceView(context:Context) : GLSurfaceView(context) {
         when (e.action) {
             MotionEvent.ACTION_MOVE -> {
 
-                var dx: Float = x - previousX
-                var dy: Float = y - previousY
+                val x_org = width * 0.5f
+                val y_org = height.toFloat()
 
-                // reverse direction of rotation above the mid-line
-                if (y > height / 2) {
-                    dx *= -1
-                }
+                val dx: Float = x_org - x
+                val dy: Float = y_org - y
 
-                // reverse direction of rotation to left of the mid-line
-                if (x < width / 2) {
-                    dy *= -1
-                }
-
-                renderer.angle += (dx + dy) * TOUCH_SCALE_FACTOR
+                renderer.angle = max(min(atan2(dx, dy), 1.0f), -1.0f)
                 requestRender()
             }
             MotionEvent.ACTION_UP -> {
