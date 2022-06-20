@@ -4,14 +4,13 @@ import android.opengl.GLES30
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
 import android.os.SystemClock
+import java.util.*
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
-import kotlin.math.cos
-import kotlin.math.max
-import kotlin.math.min
-import kotlin.math.sin
+import kotlin.math.*
 
 enum class GameMode{
+    INITIALIZE,
     READY,
     FIRING,
     EXPLODING,
@@ -27,16 +26,24 @@ class GameRenderer : GLSurfaceView.Renderer {
     private val projectionMatrix = FloatArray(16)
     private val viewMatrix = FloatArray(16)
 
-    private lateinit var mTriangle: Triangle
-    private lateinit var mSquare: Square2
-    private lateinit var mSphere: Sphere
+    private lateinit var mBubbleObjects: BubbleObject
+    private lateinit var mProjectileObject: ProjectileObject
     private lateinit var mTargetingLine: TargetingLine
 
+    var mBubblePositions: MutableList<Float> = arrayListOf()
+    var mBubbleColors: MutableList<Int> = arrayListOf()
+    var mBubbleColorsRGB : MutableList<Float> = arrayListOf()
+    var mExplodingCondition : MutableList<Float> = arrayListOf()
+
+    var mNextColor: Int = 0
+
+    private val random = Random()
     @Volatile
-    var angle = 0.0f
+    var mFireAngle = 0.0f
+    var mProjectileAngle = 0.0f
 
     @Volatile
-    var mGameMode : GameMode = GameMode.READY
+    var mGameMode : GameMode = GameMode.INITIALIZE
 
     private val mMaxWorldY = 1.0f
     private val mMinWorldY = -1.0f
@@ -50,10 +57,62 @@ class GameRenderer : GLSurfaceView.Renderer {
         // Set the background frame color
         GLES30.glClearColor(0.0f, 0.0f, 0.0f, 1.0f)
 
-        mTriangle = Triangle()
-        mSquare = Square2()
-        mSphere = Sphere()
+        mBubbleObjects = BubbleObject()
+        mBubbleObjects.initialize()
+
+        mProjectileObject = ProjectileObject()
+        mProjectileObject.initialize()
+
         mTargetingLine = TargetingLine()
+    }
+
+    fun colorCodeToRGB(color: Int): FloatArray {
+        var colorRGB = floatArrayOf(0.0f, 0.0f, 0.0f, 0.0f)
+
+        if(color == 0) {
+            colorRGB = floatArrayOf(0.63671875f, 0.76953125f, 0.22265625f, 0.1f)
+        }else if(color == 1) {
+            colorRGB = floatArrayOf(0.76953125f, 0.63671875f, 0.22265625f, 0.1f)
+        }else if(color == 2) {
+            colorRGB = floatArrayOf(0.63671875f, 0.22265625f, 0.76953125f, 0.1f)
+        }else if(color == 3) {
+            colorRGB = floatArrayOf(0.22265625f, 0.63671875f, 0.76953125f, 0.1f)
+        }
+        return colorRGB
+    }
+
+    fun setReadyState(){
+        mGameMode = GameMode.READY
+        mProjectileObject.mInstancePositions[0] = 0.0f
+        mProjectileObject.mInstancePositions[1] = mMinWorldY
+
+        mNextColor = random.nextInt(4)
+        val colorRGB = colorCodeToRGB(mNextColor)
+        mProjectileObject.mInstanceColors[0] = colorRGB[0]
+        mProjectileObject.mInstanceColors[1] = colorRGB[1]
+        mProjectileObject.mInstanceColors[2] = colorRGB[2]
+    }
+
+    fun checkExplodingCondition(idxStart:Int) {
+
+        var stackIndex :MutableList<Int> = arrayListOf()
+
+        // mark conditions
+        mExplodingCondition.clear()
+        for(i in 0 until mBubblePositions.count()/4){
+
+        }
+        // push
+        stackIndex.add(idxStart)
+
+        while(stackIndex.isNotEmpty()){
+
+            val idxCur = stackIndex[0]
+            stackIndex.removeAt(0)
+
+
+        }
+
     }
 
     /**
@@ -74,42 +133,120 @@ class GameRenderer : GLSurfaceView.Renderer {
 
 
         val time = SystemClock.uptimeMillis() % 4000L
-        // Create a rotation transformation for the triangle
-//        val time = SystemClock.uptimeMillis() % 4000L
-
-//        var rotationMatrix = FloatArray(16)
-//        Matrix.setRotateM(rotationMatrix, 0, angle, 0f, 0f, -1.0f)
-
-        // Combine the rotation matrix with the projection and camera view
-        // Note that the vPMatrix factor *must be first* in order
-        // for the matrix multiplication product to be correct.
-//        Matrix.multiplyMM(scratch, 0, vPMatrix, 0, rotationMatrix, 0)
 
         val velocity = 0.02f
+        val worldWidth : Float = mMaxWorldX - mMinWorldX
+        val cols = 8
+        val rows = 12
+        val bubbleSize :Float = (worldWidth * 0.5f) / cols.toFloat()
+
+        if(GameMode.INITIALIZE == mGameMode){
+            for(i in 0 until cols){
+                mBubblePositions.add(mMinWorldX + bubbleSize + 2.0f*bubbleSize*i.toFloat())
+                mBubblePositions.add(mMaxWorldY - bubbleSize)
+                mBubblePositions.add(0.0f)
+                mBubblePositions.add(0.0f)
+
+                val color = random.nextInt(4)
+                mBubbleColors.add(color)
+
+                val colorRGB = colorCodeToRGB(color)
+                mBubbleColorsRGB.add(colorRGB[0])
+                mBubbleColorsRGB.add(colorRGB[1])
+                mBubbleColorsRGB.add(colorRGB[2])
+                mBubbleColorsRGB.add(colorRGB[3])
+
+            }
+            mBubbleObjects.mInstancePositions = mBubblePositions.toFloatArray()
+            mBubbleObjects.mInstanceColors = mBubbleColorsRGB.toFloatArray()
+            mBubbleObjects.mNumInstances = cols
+
+            setReadyState()
+        }
 
         if(GameMode.FIRING == mGameMode){
-            val vx = -velocity * sin(angle)
-            val vy = velocity * cos(angle)
+            val vx = -velocity * sin(mProjectileAngle)
+            val vy = velocity * cos(mProjectileAngle)
 
-            mSphere.instancePositions[0] += vx
-            mSphere.instancePositions[1] += vy
+            mProjectileObject.mInstancePositions[0] += vx
+            mProjectileObject.mInstancePositions[1] += vy
 
-            if(mMinWorldX > mSphere.instancePositions[0] || mSphere.instancePositions[0] > mMaxWorldX) {
-                angle *= -1.0f
+            // Test boundary.
+            if((mMinWorldX+bubbleSize) > mProjectileObject.mInstancePositions[0] || mProjectileObject.mInstancePositions[0] > (mMaxWorldX-bubbleSize)) {
+                mProjectileAngle *= -1.0f
             }
 
-            if(mSphere.instancePositions[1] > 1.0f){
-                mSphere.instancePositions[0] = 0.0f
-                mSphere.instancePositions[1] = -1.0f
-                mGameMode = GameMode.READY
+            if(mProjectileObject.mInstancePositions[1] > mMaxWorldY){
+                setReadyState()
+            }
+
+            // Test collision with other bubbles
+            val curX = mProjectileObject.mInstancePositions[0]
+            val curY = mProjectileObject.mInstancePositions[1]
+            var minSqrDist = 1000.0f
+            var minBubbleX = 0.0f
+            var minBubbleY = 0.0f
+            val diameter = bubbleSize * 2.0f
+            for(idxBubble in 0 until mBubbleObjects.mNumInstances){
+                val bubbleX = mBubblePositions[idxBubble * 4 + 0]
+                val bubbleY = mBubblePositions[idxBubble * 4 + 1]
+                val dx = curX - bubbleX
+                val dy = curY - bubbleY
+                val sqrDist = (dx*dx) + (dy*dy)
+                if((sqrDist < (diameter*diameter)) && (sqrDist < minSqrDist)){
+                    minSqrDist = sqrDist
+                    minBubbleX = bubbleX
+                    minBubbleY = bubbleY
+                }
+            }
+
+            if(minSqrDist <= diameter*diameter){
+                val newX = if(curX < minBubbleX){
+                    minBubbleX - (diameter * cos(60.0f * PI.toFloat() / 180.0f))
+                }else{
+                    minBubbleX + (diameter * cos(60.0f * PI.toFloat() / 180.0f))
+                }
+                val newY = minBubbleY - (diameter * sin(60.0f * PI.toFloat() / 180.0f))
+
+                mBubblePositions.add(newX)
+                mBubblePositions.add(newY)
+                mBubblePositions.add(0.0f)
+                mBubblePositions.add(0.0f)
+
+                mBubbleColors.add(mNextColor)
+                val colorRGB = colorCodeToRGB(mNextColor)
+                mBubbleColorsRGB.add(colorRGB[0])
+                mBubbleColorsRGB.add(colorRGB[1])
+                mBubbleColorsRGB.add(colorRGB[2])
+                mBubbleColorsRGB.add(colorRGB[3])
+
+                mBubbleObjects.mInstancePositions = mBubblePositions.toFloatArray()
+                mBubbleObjects.mInstanceColors = mBubbleColorsRGB.toFloatArray()
+                mBubbleObjects.mNumInstances ++
+
+                mGameMode = GameMode.EXPLODING
             }
         }
+        else if(GameMode.EXPLODING == mGameMode){
+            checkExplodingCondition(mBubblePositions.count()-1)
 
-        mSphere.draw(vPMatrix)
+            mGameMode = GameMode.FALLING
+        }
+        else if(GameMode.FALLING == mGameMode) {
+            setReadyState()
+        }
 
         if(GameMode.READY == mGameMode) {
-            mTargetingLine.draw(vPMatrix, angle)
+            mProjectileAngle = mFireAngle
+
+            val startY = mMaxWorldY - (rows.toFloat() * (bubbleSize*2.0f))
+
+            mTargetingLine.draw(vPMatrix, mFireAngle)
         }
+
+        mBubbleObjects.draw(vPMatrix, bubbleSize)
+        mProjectileObject.draw(vPMatrix, bubbleSize)
+
     }
 
     /**

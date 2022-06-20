@@ -45,7 +45,7 @@ class SurfaceView(context:Context) : GLSurfaceView(context) {
                 val dx: Float = x_org - x
                 val dy: Float = y_org - y
 
-                renderer.angle = max(min(atan2(dx, dy), 1.0f), -1.0f)
+                renderer.mFireAngle = max(min(atan2(dx, dy), 1.0f), -1.0f)
                 requestRender()
             }
             MotionEvent.ACTION_UP -> {

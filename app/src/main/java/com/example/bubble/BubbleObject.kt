@@ -5,11 +5,9 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
 
-class Sphere {
+class BubbleObject : BasicObject() {
 
-	// number of coordinates per vertex in this array
-	private val COORDS_PER_VERTEX = 3
-	val vertexCoords = floatArrayOf(
+	override val mVertexCoords = floatArrayOf(
 		-0.013635f, 0.483420f, -0.888825f, 0.292166f, 0.099052f, -0.961172f, -0.089589f, 0.090364f, -1.000517f,
 		-0.004718f, -0.999721f, 0.113974f, -0.070660f, -0.965527f, -0.282293f, 0.161124f, -0.962048f, -0.245755f,
 		-0.089589f, 0.090364f, -1.000517f, 0.271682f, -0.284965f, -0.928237f, -0.096354f, -0.293133f, -0.960782f,
@@ -251,7 +249,7 @@ class Sphere {
 		-0.032452f, 0.925922f, -0.385598f, -0.168259f, 0.984293f, -0.112427f, 0.158938f, 0.967444f, -0.228610f,
 		-0.013635f, 0.483420f, -0.888825f, -0.317062f, 0.649034f, -0.707598f, 0.111080f, 0.649632f, -0.760013f
 	)
-	val vertexNormal = floatArrayOf(
+	override val mVertexNormal = floatArrayOf(
 		0.093400f, 0.255400f, -0.962300f, 0.093400f, 0.255400f, -0.962300f, 0.093400f, 0.255400f, -0.962300f,
 		0.029200f, -0.995400f, -0.090800f, 0.029200f, -0.995400f, -0.090800f, 0.029200f, -0.995400f, -0.090800f,
 		0.089900f, -0.104200f, -0.990500f, 0.089900f, -0.104200f, -0.990500f, 0.089900f, -0.104200f, -0.990500f,
@@ -494,171 +492,22 @@ class Sphere {
 		-0.093000f, 0.652600f, -0.752000f, -0.093000f, 0.652600f, -0.752000f, -0.093000f, 0.652600f, -0.752000f
 	)
 
-
-
-	private val fragmentShaderCode =
-		"#version 300 es\n" +
-		"precision mediump float;" +
-		"out vec4 fragColor;" +
-		"in vec4 vColor;" +
-		"in vec4 transVertexNormal;" +
-		"void main() {" +
-		"  vec4 diffuseLightIntensity = vec4(1.0, 1.0, 1.0, 1.0);" +
-		"  vec4 inverseLightDirection = normalize(vec4(0.0, 1.0, 1.0, 0.0));" +
-		"  float normalDotLight = max(0.0, dot(transVertexNormal, inverseLightDirection));" +
-		"  fragColor = vColor;" +
-		"  fragColor += normalDotLight * vColor * diffuseLightIntensity;" +
-		"  clamp(fragColor, 0.0, 1.0);" +
-		"}"
-
-	private val vertexShaderCode =
-		// This matrix member variable provides a hook to manipulate
-		// the coordinates of the objects that use this vertex shader
-		"#version 300 es\n" +
-		"uniform mat4 uMVPMatrix;" +
-		"layout(location = 0) in vec4 vPosition;" +
-		"layout(location = 1) in vec3 vNormal;" +
-
-		"uniform vec4 vInstanceColors[100];" +
-		"uniform vec4 vInstancePositions[100];" +
-		"out vec4 transVertexNormal;" +
-		"out vec4 vColor;" +
-		"void main() {" +
-		// the matrix must be included as a modifier of gl_Position
-		// Note that the uMVPMatrix factor *must be first* in order
-		// for the matrix multiplication product to be correct.
-	    "  vec4 vScale = vec4(0.05, 0.05, 0.05, 1.0);" +
-		"  gl_Position = uMVPMatrix * ((vPosition*vScale) + vInstancePositions[gl_InstanceID]);" +
-		"  transVertexNormal = normalize(uMVPMatrix * vec4(vNormal, 0.0));" +
-		"  vColor = vInstanceColors[gl_InstanceID];" +
-		"}"
-
-	// Use to access and set the view transformation
-	private var vPMatrixHandle: Int = 0
-
-	private var mProgram: Int
-
-	init {
-		val vertexShader: Int = loadShader(GLES30.GL_VERTEX_SHADER, vertexShaderCode)
-		val fragmentShader: Int = loadShader(GLES30.GL_FRAGMENT_SHADER, fragmentShaderCode)
-
-		mProgram = GLES30.glCreateProgram().also {
-			// add the vertex shader to program
-			GLES30.glAttachShader(it, vertexShader)
-			// add the fragment shader to program
-			GLES30.glAttachShader(it, fragmentShader)
-			// create OpenGL ES program executables
-			GLES30.glLinkProgram(it)
-		}
-
-	}
-
-	var numInstances: Int = 4
+	override var mNumInstances: Int = 4
 
 	// Set color with red, green, blue and alpha (opacity) values
-	val instanceColors = floatArrayOf(
+	override var mInstanceColors = floatArrayOf(
 		0.63671875f, 0.76953125f, 0.22265625f, 0.1f,
 		0.76953125f, 0.63671875f, 0.22265625f, 0.1f,
 		0.63671875f, 0.76953125f, 0.22265625f, 0.1f,
 		0.63671875f, 0.22265625f, 0.76953125f, 0.1f,
 	)
-	var instancePositions = floatArrayOf(
-		 0.0f,  -1.0f, 0.0f, 0.0f,
+	override var mInstancePositions = floatArrayOf(
+		-0.2f, -0.2f, 0.0f, 0.0f,
 		+0.2f, -0.2f, 0.0f, 0.0f,
 		-0.2f, +0.2f, 0.0f, 0.0f,
 		+0.2f, +0.2f, 0.0f, 0.0f,
 	)
 
-	private var vertexBuffer: FloatBuffer =
-		// (number of coordinate values * 4 bytes per float)
-		ByteBuffer.allocateDirect(vertexCoords.size * 4).run {
-			// use the device hardware's native byte order
-			order(ByteOrder.nativeOrder())
-			// create a floating point buffer from the ByteBuffer
-			asFloatBuffer().apply {
-				put(vertexCoords)		// add the coordinates to the FloatBuffer
-				position(0)	// set the buffer to read the first coordinate
-			}
-		}
-
-	private var normalBuffer: FloatBuffer =
-		// (number of coordinate values * 4 bytes per float)
-		ByteBuffer.allocateDirect(vertexNormal.size * 4).run {
-			// use the device hardware's native byte order
-			order(ByteOrder.nativeOrder())
-			// create a floating point buffer from the ByteBuffer
-			asFloatBuffer().apply {
-				put(vertexNormal)		// add the coordinates to the FloatBuffer
-				position(0)	// set the buffer to read the first coordinate
-			}
-		}
-
-	fun loadShader(type: Int, shaderCode: String): Int {
-
-		// create a vertex shader type (GLES30.GL_VERTEX_SHADER)
-		// or a fragment shader type (GLES30.GL_FRAGMENT_SHADER)
-		return GLES30.glCreateShader(type).also { shader ->
-
-			// add the source code to the shader and compile it
-			GLES30.glShaderSource(shader, shaderCode)
-			GLES30.glCompileShader(shader)
-
-			val log = GLES30.glGetShaderInfoLog(shader)
-			print("shader compile")
-			print(log)
-		}
-	}
-
-	private var mPositionHandle: Int = 0
-	private var mColorHandle: Int = 0
-	private var mVertexNormalHandle: Int = 0
-	private var mInstancePositionsHandle: Int = 0
-
-	private val vertexCount: Int = vertexCoords.size / COORDS_PER_VERTEX
-	private val vertexStride: Int = COORDS_PER_VERTEX * 4 // 4 bytes per vertex
-
-	fun draw(mvpMatrix: FloatArray) {
-
-		// Add program to OpenGL ES environment
-		GLES30.glUseProgram(mProgram)
-
-		// get handle to shape's transformation matrix
-		vPMatrixHandle = GLES30.glGetUniformLocation(mProgram, "uMVPMatrix")
-
-		// Pass the projection and view transformation to the shader
-		GLES30.glUniformMatrix4fv(vPMatrixHandle, 1, false, mvpMatrix, 0)
-
-		// get handle to vertex shader's vPosition member
-		mPositionHandle = GLES30.glGetAttribLocation(mProgram, "vPosition").also {
-			GLES30.glEnableVertexAttribArray(it)
-			GLES30.glVertexAttribPointer(it, COORDS_PER_VERTEX, GLES30.GL_FLOAT, false, vertexStride, vertexBuffer)
-		}
-
-		mInstancePositionsHandle = GLES30.glGetUniformLocation(mProgram, "vInstancePositions").also {
-			GLES30.glUniform4fv(it, numInstances, instancePositions, 0)
-		}
-
-		mVertexNormalHandle = GLES30.glGetAttribLocation(mProgram, "vNormal").also {
-			GLES30.glEnableVertexAttribArray(it)
-			GLES30.glVertexAttribPointer(it, COORDS_PER_VERTEX, GLES30.GL_FLOAT, false, 0, normalBuffer)
-		}
-
-
-		// get handle to fragment shader's vColor member
-		mColorHandle = GLES30.glGetUniformLocation(mProgram, "vInstanceColors").also {
-			// Set color for drawing the triangle
-			GLES30.glUniform4fv(it, numInstances, instanceColors, 0)
-		}
-
-		// Draw the triangle
-//		GLES30.glDrawArrays(GLES30.GL_TRIANGLES, 0, vertexCount)
-		GLES30.glDrawArraysInstanced(GLES30.GL_TRIANGLES, 0, vertexCount, numInstances)
-
-		// Disable vertex array
-		GLES30.glDisableVertexAttribArray(mPositionHandle)
-		GLES30.glDisableVertexAttribArray(mInstancePositionsHandle)
-		GLES30.glDisableVertexAttribArray(mColorHandle)
-	}
 }
 
 
