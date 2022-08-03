@@ -1,5 +1,6 @@
 package com.example.bubble
 
+import android.graphics.Bitmap
 import android.opengl.GLES30
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
@@ -31,7 +32,7 @@ enum class BubbleType {
     NUM_COLORS
 }
 
-class GameRenderer : GLSurfaceView.Renderer {
+class GameRenderer(texture: Bitmap) : GLSurfaceView.Renderer {
 
     // Model View Projection Matrix
     private val mPMatrix = FloatArray(16)
@@ -43,6 +44,7 @@ class GameRenderer : GLSurfaceView.Renderer {
     private lateinit var mProjectileObject: ProjectileObject
     private lateinit var mTargetingLine: TargetingLine
     private lateinit var mParticleObjects: ParticleObject
+    private lateinit var mCharObject: CharacterObject
 
     var mBubblePositions: MutableList<Float> = arrayListOf()
     var mBubbleColors: MutableList<Int> = arrayListOf()
@@ -82,6 +84,7 @@ class GameRenderer : GLSurfaceView.Renderer {
     private val mWorldHeight : Float = mBubbleRadius + (sin(mAlignAngle)*mBubbleDiameter*mRows)
     private val mGameOverHeight : Float = mBubbleRadius + (sin(mAlignAngle)*mBubbleDiameter*(mRows-1.0f))
     private var mOrigin : FloatArray = computeOrigin()
+    private val mTexture : Bitmap = texture
 
     /**
      * This method isc alled once to set up the view's OpenGL ES environment.
@@ -103,6 +106,9 @@ class GameRenderer : GLSurfaceView.Renderer {
         mParticleObjects.initialize()
 
         mTargetingLine = TargetingLine()
+
+        mCharObject = CharacterObject(mTexture)
+
     }
 
     fun computeOrigin(): FloatArray{
@@ -510,6 +516,8 @@ class GameRenderer : GLSurfaceView.Renderer {
             mProjectileObject.draw(mPMatrix, mBubbleRadius)
         }
 
+        mCharObject.setPosition(floatArrayOf(mMinWorldX, mMaxWorldY + mTopMarginY, 0.0f, 0.0f))
+        mCharObject.draw(mPMatrix)
     }
 
     /**

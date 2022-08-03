@@ -17,7 +17,6 @@ class SurfaceView(context:Context) : GLSurfaceView(context) {
         // Create an OpenGL ES 2.0 context
         setEGLContextClientVersion(2)
 
-        mRenderer = GameRenderer()
 
         val imageTextureNumbers = BitmapFactory.decodeResource(context.resources, R.drawable.numbers)
         var bufferTextureNumbers = ByteBuffer.allocate(imageTextureNumbers.byteCount)
@@ -28,6 +27,9 @@ class SurfaceView(context:Context) : GLSurfaceView(context) {
             val v : Float = bufferTextureNumbers[i].toUByte().toFloat() / 255.0f
             bufferTextureNumbersFloat.add(v)
         }
+
+
+        mRenderer = GameRenderer(imageTextureNumbers)
 
         // Set the Renderer for drawing on the GLSurfaceView
         setRenderer(mRenderer)
