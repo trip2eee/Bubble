@@ -27,11 +27,12 @@ class TargetingLine {
         "layout(location = 0) in vec4 vPosition;" +
         "uniform vec4 vInstanceColors[10];" +
         "uniform vec4 vInstancePositions[10];" +
+        "uniform vec4 vOrigin;" +
         "out vec4 vColor;" +
         "void main() {" +
-        "  vec4 vScale = vec4(0.025, 0.025, 0.025, 1.0);" +
+        "  vec4 vScale = vec4(0.04, 0.04, 0.04, 1.0);" +
         "  vec4 vScaledPosition = vPosition * vScale;" +
-        "  gl_Position = uMVPMatrix * ((uRotationMatrix*vScaledPosition) + (uRotationMatrix*vInstancePositions[gl_InstanceID] - vec4(0.0, 1.0, 0.0, 0.0)) );" +
+        "  gl_Position = uMVPMatrix * ((uRotationMatrix*vScaledPosition) + (uRotationMatrix*vInstancePositions[gl_InstanceID] + vOrigin));" +
         "  vColor = vInstanceColors[gl_InstanceID];" +
         "}"
 
@@ -73,10 +74,14 @@ class TargetingLine {
         1.0f, 0.0f, 0.0f, 1.0f,
     )
     var mInstancePositions = floatArrayOf(
-        0.0f, 0.1f, 0.0f, 0.0f,
         0.0f, 0.2f, 0.0f, 0.0f,
-        0.0f, 0.3f, 0.0f, 0.0f,
         0.0f, 0.4f, 0.0f, 0.0f,
+        0.0f, 0.6f, 0.0f, 0.0f,
+        0.0f, 0.8f, 0.0f, 0.0f,
+    )
+
+    var mOrigin = floatArrayOf(
+        0.0f, 0.0f, 0.0f, 0.0f
     )
 
     private var mRotationMatrix = FloatArray(16)
@@ -112,6 +117,7 @@ class TargetingLine {
     private var mPositionHandle: Int = 0
     private var mColorHandle: Int = 0
     private var mInstancePositionsHandle: Int = 0
+    private var mOriginHandle: Int = 0
 
     private val vertexCount: Int = mVertexCoords.size / COORDS_PER_VERTEX
     private val vertexStride: Int = COORDS_PER_VERTEX * 4 // 4 bytes per vertex
@@ -127,6 +133,11 @@ class TargetingLine {
             GLES30.glUniformMatrix4fv(it, 1, false, mRotationMatrix, 0)
         }
 
+        // get handle to vertex shader's vOrigin member
+        mOriginHandle = GLES30.glGetUniformLocation(mProgram, "vOrigin").also {
+            // Set color for drawing the triangle
+            GLES30.glUniform4fv(it, 1, mOrigin, 0)
+        }
 
         // get handle to shape's transformation matrix
         vPMatrixHandle = GLES30.glGetUniformLocation(mProgram, "uMVPMatrix").also{
@@ -149,6 +160,7 @@ class TargetingLine {
             GLES30.glUniform4fv(it, mNumInstances, mInstanceColors, 0)
         }
 
+
         // Draw the triangle
         GLES30.glDrawArraysInstanced(GLES30.GL_TRIANGLES, 0, vertexCount, mNumInstances)
 
@@ -156,6 +168,10 @@ class TargetingLine {
         GLES30.glDisableVertexAttribArray(mPositionHandle)
         GLES30.glDisableVertexAttribArray(mInstancePositionsHandle)
         GLES30.glDisableVertexAttribArray(mColorHandle)
+    }
+
+    fun setOrigin(origin: FloatArray){
+        mOrigin = origin
     }
 }
 
