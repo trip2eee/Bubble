@@ -8,7 +8,7 @@ import java.nio.ByteOrder
 import java.nio.FloatBuffer
 import java.nio.IntBuffer
 
-class CharacterObject(texture: Bitmap) {
+class TextObject(texFont: Bitmap) {
 
     private val COORDS_PER_VERTEX = 4
 
@@ -20,8 +20,8 @@ class CharacterObject(texture: Bitmap) {
                 "in vec4 vColor;" +
                 "in vec2 vTextureCoord;" +
                 "void main() {" +
-                "  fragColor = texture(textureObject, vTextureCoord) * vec4(0.0, 1.0, 0.0, 1.0);" +
-//                "  fragColor = vec4(vTextureCoord.x, vTextureCoord.y, 0.0, 1.0);" +
+                "  vec4 texColor = texture(textureObject, vTextureCoord);" +
+                "  fragColor = vec4(texColor[0]*vColor[0], texColor[1]*vColor[1], texColor[2]*vColor[2], texColor[0]);" +
                 "}"
 
     private val mVertexShaderCode =
@@ -34,9 +34,7 @@ class CharacterObject(texture: Bitmap) {
                 "out vec4 vColor;" +
                 "out vec2 vTextureCoord;" +
                 "void main() {" +
-                "  vec4 vScale = vec4(0.20, 0.25, 0.25, 1.0);" +
-//                "  vec4 vScaledPosition = vPosition * vScale;" +
-                "  vec4 vScaledPosition = vec4(vPosition[0], vPosition[1], 0.0, 1.0) * vScale;" +
+                "  vec4 vScaledPosition = vec4(vPosition[0], vPosition[1], 0.0, 1.0);" +
                 "  gl_Position = uMVPMatrix * (vScaledPosition + vInstancePositions[gl_InstanceID] + vOrigin);" +
                 "  vColor = vInstanceColors[gl_InstanceID];" +
                 "  vTextureCoord = vec2(vPosition[2], vPosition[3]);" +
@@ -45,7 +43,7 @@ class CharacterObject(texture: Bitmap) {
 
     // Use to access and set the view transformation
     private var vPMatrixHandle: Int = 0
-    private val mTexture: Bitmap = texture
+    private val mTexFont: Bitmap = texFont
 
     private var mProgram: Int
     private var mTextureHandle = IntBuffer.allocate(1)
@@ -84,41 +82,19 @@ class CharacterObject(texture: Bitmap) {
         GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_S, GLES30.GL_CLAMP_TO_EDGE);
         GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_T, GLES30.GL_CLAMP_TO_EDGE);
 
-        GLUtils.texImage2D(GLES30.GL_TEXTURE_2D, 0, mTexture, 0)
+        GLUtils.texImage2D(GLES30.GL_TEXTURE_2D, 0, mTexFont, 0)
         var temp_texture = FloatBuffer.wrap(buff_texture)
 //        GLES30.glTexImage2D(GLES30.GL_TEXTURE_2D, 0, GLES30.GL_RGB32F, 100, 100, 0, GLES30.GL_RGB, GLES30.GL_FLOAT, temp_texture)
 //        GLES30.glGenerateMipmap(GLES30.GL_TEXTURE_2D)
 
 
-        mTexture.recycle()  // TODO: to check.
+        mTexFont.recycle()  // TODO: to check.
     }
-
-    // x, y, u, v
-    // Vertex coordinates (x,y)
-    // 1. (0, 0)
-    //    (0,-1)   (1,-1)
-    // 2. (0, 0)   (1, 0)
-    //             (1,-1)
-    // Texture coordinates (u, v)
-    // 1. (0, 1)
-    //    (0, 0)    (1,0)
-    // 2. (0, 1)    (1,1)
-    //              (1,0)
-    //
-    val mVertexCoords = floatArrayOf(
-        0.0f,  0.0f, 0.0f, 0.0f,
-        1.0f, -1.0f, 0.1f, 1.0f,
-        0.0f, -1.0f, 0.0f, 1.0f,
-
-        0.0f, 0.0f,  0.0f, 0.0f,
-        1.0f, 0.0f,  0.1f, 0.0f,
-        1.0f, -1.0f, 0.1f, 1.0f
-    )
 
     var mNumInstances: Int = 1
 
     // Set color with red, green, blue and alpha (opacity) values
-    val mInstanceColors = floatArrayOf(
+    var mInstanceColors = floatArrayOf(
         1.0f, 1.0f, 1.0f, 1.0f,
         1.0f, 1.0f, 1.0f, 1.0f,
     )
@@ -130,20 +106,6 @@ class CharacterObject(texture: Bitmap) {
     var mOrigin = floatArrayOf(
         0.0f, 0.0f, 0.0f, 0.0f
     )
-
-    private var mRotationMatrix = FloatArray(16)
-
-    private var mVertexBuffer: FloatBuffer =
-        // (number of coordinate values * 4 bytes per float)
-        ByteBuffer.allocateDirect(mVertexCoords.size * 4).run {
-            // use the device hardware's native byte order
-            order(ByteOrder.nativeOrder())
-            // create a floating point buffer from the ByteBuffer
-            asFloatBuffer().apply {
-                put(mVertexCoords)		// add the coordinates to the FloatBuffer
-                position(0)	// set the buffer to read the first coordinate
-            }
-        }
 
     fun loadShader(type: Int, shaderCode: String): Int {
 
@@ -166,15 +128,90 @@ class CharacterObject(texture: Bitmap) {
     private var mInstancePositionsHandle: Int = 0
     private var mOriginHandle: Int = 0
     private var mTextureBuffer: Int = 0
-
-
-    private val vertexCount: Int = mVertexCoords.size / COORDS_PER_VERTEX
     private val vertexStride: Int = COORDS_PER_VERTEX * 4 // 4 bytes per vertex
 
-    fun draw(mvpMatrix: FloatArray) {
+    fun draw(mvpMatrix: FloatArray, text:String, x:Float, y:Float, z:Float, w:Float, h:Float, color:FloatArray) {
+
+        var vertexCoords : MutableList<Float> = arrayListOf()
+        mInstanceColors[0] = color[0]
+        mInstanceColors[1] = color[1]
+        mInstanceColors[2] = color[2]
+        mInstanceColors[3] = color[3]
+
+        // x, y, u, v
+        // Vertex coordinates (x,y)
+        // 1. (0, 0)
+        //    (0,-1)   (1,-1)
+        // 2. (0, 0)   (1, 0)
+        //             (1,-1)
+        // Texture coordinates (u, v)
+        // 1. (0, 1)
+        //    (0, 0)    (1,0)
+        // 2. (0, 1)    (1,1)
+        //              (1,0)
+        //
+
+        for(idxChar in 0 until text.length){
+            val code:Int = text[idxChar].code
+            val idx = code - 32
+            val row:Float = (idx / 32).toFloat()
+            val col:Float = (idx % 32).toFloat()
+
+            val charWidth: Float = 1.0f/32.0f
+            val charHeight: Float = 1.0f / 3.0f
+
+            // triangle 1
+            vertexCoords.add(idxChar.toFloat() * w)
+            vertexCoords.add(0.0f)
+            vertexCoords.add(col * charWidth)
+            vertexCoords.add(row * charHeight)
+
+            vertexCoords.add(idxChar.toFloat() * w + w)
+            vertexCoords.add(-h)
+            vertexCoords.add(col * charWidth + charWidth)
+            vertexCoords.add(row * charHeight + charHeight)
+
+            vertexCoords.add(idxChar.toFloat() * w)
+            vertexCoords.add(-h)
+            vertexCoords.add(col * charWidth)
+            vertexCoords.add(row * charHeight + charHeight)
+
+            // triangle 2
+            vertexCoords.add(idxChar.toFloat() * w)
+            vertexCoords.add(0.0f)
+            vertexCoords.add(col * charWidth)
+            vertexCoords.add(row * charHeight)
+
+            vertexCoords.add(idxChar.toFloat() * w + w)
+            vertexCoords.add(0.0f)
+            vertexCoords.add(col * charWidth + charWidth)
+            vertexCoords.add(row * charHeight)
+
+            vertexCoords.add(idxChar.toFloat() * w + w)
+            vertexCoords.add(-h)
+            vertexCoords.add(col * charWidth + charWidth)
+            vertexCoords.add(row * charHeight + charHeight)
+        }
+        val vertexCount:Int = vertexCoords.size / COORDS_PER_VERTEX
+
+        val vertexBuffer: FloatBuffer =
+            // (number of coordinate values * 4 bytes per float)
+            ByteBuffer.allocateDirect(vertexCoords.size * 4).run {
+                // use the device hardware's native byte order
+                order(ByteOrder.nativeOrder())
+                // create a floating point buffer from the ByteBuffer
+                asFloatBuffer().apply {
+                    put(vertexCoords.toFloatArray())		// add the coordinates to the FloatBuffer
+                    position(0)	// set the buffer to read the first coordinate
+                }
+            }
 
         // Add program to OpenGL ES environment
         GLES30.glUseProgram(mProgram)
+
+        mOrigin[0] = x
+        mOrigin[1] = y
+        mOrigin[2] = z
 
         // get handle to vertex shader's vOrigin member
         mOriginHandle = GLES30.glGetUniformLocation(mProgram, "vOrigin").also {
@@ -182,8 +219,6 @@ class CharacterObject(texture: Bitmap) {
             GLES30.glUniform4fv(it, 1, mOrigin, 0)
         }
 
-
-//        GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
         GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
         GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, mTextureHandle[0])
 
@@ -200,7 +235,7 @@ class CharacterObject(texture: Bitmap) {
         // get handle to vertex shader's vPosition member
         mPositionHandle = GLES30.glGetAttribLocation(mProgram, "vPosition").also {
             GLES30.glEnableVertexAttribArray(it)
-            GLES30.glVertexAttribPointer(it, COORDS_PER_VERTEX, GLES30.GL_FLOAT, false, vertexStride, mVertexBuffer)
+            GLES30.glVertexAttribPointer(it, COORDS_PER_VERTEX, GLES30.GL_FLOAT, false, vertexStride, vertexBuffer)
         }
 
         mInstancePositionsHandle = GLES30.glGetUniformLocation(mProgram, "vInstancePositions").also {
@@ -215,8 +250,7 @@ class CharacterObject(texture: Bitmap) {
 
         // Draw the triangle
         GLES30.glDrawArraysInstanced(GLES30.GL_TRIANGLES, 0, vertexCount, mNumInstances)
-//        GLES30.glDrawElementsInstanced(GLES30.GL_TRIANGLES, vertexCount, GLES30.GL_UNSIGNED_SHORT, 0, mNumInstances)
-//        GLES30.glDrawElements(GLES30.GL_TRIANGLES, vertexCount, GLES30.GL_UNSIGNED_INT, 0)
+
         // Disable vertex array
         GLES30.glDisableVertexAttribArray(mPositionHandle)
 //        GLES30.glDisableVertexAttribArray(mInstancePositionsHandle)

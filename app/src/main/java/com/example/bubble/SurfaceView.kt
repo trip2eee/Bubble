@@ -18,18 +18,18 @@ class SurfaceView(context:Context) : GLSurfaceView(context) {
         setEGLContextClientVersion(2)
 
 
-        val imageTextureNumbers = BitmapFactory.decodeResource(context.resources, R.drawable.numbers)
-        var bufferTextureNumbers = ByteBuffer.allocate(imageTextureNumbers.byteCount)
-        imageTextureNumbers.copyPixelsToBuffer(bufferTextureNumbers)
+        val texFont = BitmapFactory.decodeResource(context.resources, R.drawable.font)
+        var bufferTextureNumbers = ByteBuffer.allocate(texFont.byteCount)
+        texFont.copyPixelsToBuffer(bufferTextureNumbers)
 
         var bufferTextureNumbersFloat : MutableList<Float> = arrayListOf()
-        for(i in 0 until imageTextureNumbers.byteCount){
+        for(i in 0 until texFont.byteCount){
             val v : Float = bufferTextureNumbers[i].toUByte().toFloat() / 255.0f
             bufferTextureNumbersFloat.add(v)
         }
 
 
-        mRenderer = GameRenderer(imageTextureNumbers)
+        mRenderer = GameRenderer(texFont)
 
         // Set the Renderer for drawing on the GLSurfaceView
         setRenderer(mRenderer)
@@ -68,7 +68,7 @@ class SurfaceView(context:Context) : GLSurfaceView(context) {
                 requestRender()
             }
             MotionEvent.ACTION_UP -> {
-                mRenderer.fireIfReady()
+                mRenderer.screenTabEvent()
                 requestRender()
             }
         }
