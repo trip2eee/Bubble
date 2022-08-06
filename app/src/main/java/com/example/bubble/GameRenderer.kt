@@ -15,8 +15,8 @@ enum class GameMode{
     FIRING,
     EXPLODING,
     FALLING,
-    GAMEOVER,
-    STAGE_CLEAR,
+    GAME_OVER,
+    LEVEL_CLEAR,
 }
 
 enum class BubbleStatus{
@@ -47,21 +47,20 @@ class GameRenderer(texture: Bitmap) : GLSurfaceView.Renderer {
     private lateinit var mParticleObjects: ParticleObject
     private lateinit var mTextObject: TextObject
 
-    var mBubblePositions: MutableList<Float> = arrayListOf()
-    var mBubbleColors: MutableList<Int> = arrayListOf()
-    var mBubbleColorsRGB : MutableList<Float> = arrayListOf()
-    var mBubbleStatus : MutableList<BubbleStatus> = arrayListOf()
+    private var mBubblePositions: MutableList<Float> = arrayListOf()
+    private var mBubbleColors: MutableList<Int> = arrayListOf()
+    private var mBubbleColorsRGB : MutableList<Float> = arrayListOf()
+    private var mBubbleStatus : MutableList<BubbleStatus> = arrayListOf()
 
-    var mExplodingPositions: MutableList<Float> = arrayListOf()
-    var mExplodingColorsRGB : MutableList<Float> = arrayListOf()
-
-    var mNextColor: Int = 0
+    private var mExplodingPositions: MutableList<Float> = arrayListOf()
+    private var mExplodingColorsRGB : MutableList<Float> = arrayListOf()
+    private var mNextColor: Int = 0
 
     private val random = Random()
     @Volatile
     var mFireAngle = 0.0f
-    var mProjectileAngle = 0.0f
-    var mEventTime = 0.0f
+    private var mProjectileAngle = 0.0f
+    private var mEventTime = 0.0f
 
     @Volatile
     var mGameMode : GameMode = GameMode.INITIALIZE
@@ -71,7 +70,8 @@ class GameRenderer(texture: Bitmap) : GLSurfaceView.Renderer {
     private val mMaxWorldX = 1.0f
     private val mMinWorldX = -1.0f
     private val mTopMarginY = 0.3f
-    private val mDIM_POSITION = 4
+    private val mDimPosition = 4
+    private val mDimColor = 4
 
     private val mMinBubblesToExplode = 3
     private val mCols = 8
@@ -81,6 +81,8 @@ class GameRenderer(texture: Bitmap) : GLSurfaceView.Renderer {
     private val mWorldWidth : Float = mMaxWorldX - mMinWorldX
     private val mBubbleRadius = (mWorldWidth * 0.5f) / mCols.toFloat()
     private val mBubbleDiameter = mBubbleRadius * 2.0f
+    private val mContactThreshold = mBubbleDiameter * 0.9f
+
     private val mAlignAngle = 60.0f * PI.toFloat() / 180.0f
     private val mWorldHeight : Float = mBubbleRadius + (sin(mAlignAngle)*mBubbleDiameter*mRows)
     private val mGameOverHeight : Float = mBubbleRadius + (sin(mAlignAngle)*mBubbleDiameter*(mRows-1.0f))
@@ -117,11 +119,11 @@ class GameRenderer(texture: Bitmap) : GLSurfaceView.Renderer {
 
     }
 
-    fun computeOrigin(): FloatArray{
+    private fun computeOrigin(): FloatArray{
         return floatArrayOf(0f, mMaxWorldY - mWorldHeight, 0f, 0f)
     }
 
-    fun colorCodeToRGB(color: Int): FloatArray {
+    private fun colorCodeToRGB(color: Int): FloatArray {
         var colorRGB = floatArrayOf(0.0f, 0.0f, 0.0f, 0.0f)
         val alpha = 0.8f
         if(color == BubbleType.GREEN.ordinal) {
@@ -137,40 +139,40 @@ class GameRenderer(texture: Bitmap) : GLSurfaceView.Renderer {
         return colorRGB
     }
 
-    fun checkGameOver(){
+    private fun checkGameOver(){
         // find the bubble at the lowest position.
         var lowestY = 0.0f
 
-        for(idxBubble in 0 until mBubblePositions.count()/mDIM_POSITION){
-            val bubbleY = mBubblePositions[idxBubble * 4 + 1]
+        for(idxBubble in 0 until mBubblePositions.count()/mDimPosition){
+            val bubbleY = mBubblePositions[idxBubble * mDimPosition + 1]
             if(bubbleY < lowestY){
                 lowestY = bubbleY
             }
         }
 
         if(lowestY <= (mMaxWorldY - mGameOverHeight + mBubbleRadius*0.1f)){
-            mGameMode = GameMode.GAMEOVER
+            mGameMode = GameMode.GAME_OVER
 
-            for(idxBubble in 0 until mBubblePositions.count()/mDIM_POSITION){
-                mBubbleColorsRGB[idxBubble * 4 + 0] = 0.5f
-                mBubbleColorsRGB[idxBubble * 4 + 1] = 0.5f
-                mBubbleColorsRGB[idxBubble * 4 + 2] = 0.5f
-                mBubbleColorsRGB[idxBubble * 4 + 3] = 0.5f
+            for(idxBubble in 0 until mBubblePositions.count()/mDimPosition){
+                mBubbleColorsRGB[idxBubble * mDimColor + 0] = 0.5f
+                mBubbleColorsRGB[idxBubble * mDimColor + 1] = 0.5f
+                mBubbleColorsRGB[idxBubble * mDimColor + 2] = 0.5f
+                mBubbleColorsRGB[idxBubble * mDimColor + 3] = 0.5f
             }
         }
     }
 
     private fun checkStageClear(){
         if(mBubblePositions.size == 0){
-            mGameMode = GameMode.STAGE_CLEAR
+            mGameMode = GameMode.LEVEL_CLEAR
         }
     }
 
     private fun setReadyState(){
         checkGameOver()
-        if(GameMode.GAMEOVER != mGameMode){
+        if(GameMode.GAME_OVER != mGameMode){
             checkStageClear()
-            if(GameMode.STAGE_CLEAR != mGameMode) {
+            if(GameMode.LEVEL_CLEAR != mGameMode) {
                 mGameMode = GameMode.READY
                 mProjectileObject.mInstancePositions[0] = mOrigin[0]
                 mProjectileObject.mInstancePositions[1] = mOrigin[1]
@@ -190,15 +192,15 @@ class GameRenderer(texture: Bitmap) : GLSurfaceView.Renderer {
         mExplodingColorsRGB = arrayListOf()
         mExplodingPositions = arrayListOf()
 
-        var stackIndex :MutableList<Int> = arrayListOf()
+        val stackIndex :MutableList<Int> = arrayListOf()
         // mark conditions
-        val numBubbles = mBubblePositions.count()/mDIM_POSITION
+        val numBubbles = mBubblePositions.count()/mDimPosition
         mBubbleStatus.clear()
         for(i in 0 until numBubbles){
             mBubbleStatus.add(BubbleStatus.IDLE)
         }
 
-        var numClustered: Int = 1
+        var numClustered = 1
         val contactThres = mBubbleRadius*2.1f
 
         mBubbleStatus[idxStart] = BubbleStatus.EXPLODING
@@ -207,14 +209,14 @@ class GameRenderer(texture: Bitmap) : GLSurfaceView.Renderer {
             val idxCur = stackIndex[0]  // pop
             stackIndex.removeAt(0)
 
-            val curX = mBubblePositions[idxCur * mDIM_POSITION + 0]
-            val curY = mBubblePositions[idxCur * mDIM_POSITION + 1]
+            val curX = mBubblePositions[idxCur * mDimPosition + 0]
+            val curY = mBubblePositions[idxCur * mDimPosition + 1]
 
             for(idxSearch in 0 until numBubbles) {
                 if (BubbleStatus.IDLE == mBubbleStatus[idxSearch] &&
                     mBubbleColors[idxCur] == mBubbleColors[idxSearch]) {
-                    val dx = mBubblePositions[idxSearch * mDIM_POSITION + 0] - curX
-                    val dy = mBubblePositions[idxSearch * mDIM_POSITION + 1] - curY
+                    val dx = mBubblePositions[idxSearch * mDimPosition + 0] - curX
+                    val dy = mBubblePositions[idxSearch * mDimPosition + 1] - curY
                     val sqrDist = (dx * dx) + (dy * dy)
                     if (sqrDist <= contactThres * contactThres) {
                         stackIndex.add(idxSearch)       // push
@@ -234,13 +236,13 @@ class GameRenderer(texture: Bitmap) : GLSurfaceView.Renderer {
             // remove bubbles with exploding state.
             for(i in numBubbles-1 downTo 0){
                 if(BubbleStatus.EXPLODING == mBubbleStatus[i]){
-                    for(idxCoord in 0 until 4){
-                        mExplodingPositions.add(mBubblePositions[i * mDIM_POSITION + idxCoord])
-                        mExplodingColorsRGB.add(mBubbleColorsRGB[i * mDIM_POSITION + idxCoord])
+                    for(idxCoord in 0 until mDimPosition){
+                        mExplodingPositions.add(mBubblePositions[i * mDimPosition + idxCoord])
+                        mExplodingColorsRGB.add(mBubbleColorsRGB[i * mDimPosition + idxCoord])
                     }
-                    for(idxCoord in 3 downTo 0){
-                        mBubblePositions.removeAt(i * mDIM_POSITION + idxCoord)
-                        mBubbleColorsRGB.removeAt(i * mDIM_POSITION + idxCoord)
+                    for(idxCoord in (mDimPosition-1) downTo 0){
+                        mBubblePositions.removeAt(i * mDimPosition + idxCoord)
+                        mBubbleColorsRGB.removeAt(i * mDimPosition + idxCoord)
                     }
                     mBubbleColors.removeAt(i)
                 }
@@ -250,10 +252,10 @@ class GameRenderer(texture: Bitmap) : GLSurfaceView.Renderer {
 
     private fun checkFalling(){
         // mark conditions
-        val numBubbles = mBubblePositions.count()/mDIM_POSITION
+        val numBubbles = mBubblePositions.count()/mDimPosition
         mBubbleStatus.clear()
 
-        var labeled : MutableList<Int> = arrayListOf()
+        val labeled : MutableList<Int> = arrayListOf()
 
         for(i in 0 until numBubbles){
             mBubbleStatus.add(BubbleStatus.IDLE)
@@ -261,7 +263,7 @@ class GameRenderer(texture: Bitmap) : GLSurfaceView.Renderer {
         }
 
         val contactThres = mBubbleRadius*2.1f
-        var stackIndex :MutableList<Int> = arrayListOf()
+        val stackIndex :MutableList<Int> = arrayListOf()
         var label = 0
 
         for(i in 0 until numBubbles) {
@@ -270,24 +272,24 @@ class GameRenderer(texture: Bitmap) : GLSurfaceView.Renderer {
                 label ++
                 labeled[i] = label
                 stackIndex.add(i)    // push
-                var maxY = mBubblePositions[i * mDIM_POSITION + 1]
+                var maxY = mBubblePositions[i * mDimPosition + 1]
 
                 while (stackIndex.isNotEmpty()) {
                     val idxCur = stackIndex[0]  // pop
                     stackIndex.removeAt(0)
 
-                    val curX = mBubblePositions[idxCur * mDIM_POSITION + 0]
-                    val curY = mBubblePositions[idxCur * mDIM_POSITION + 1]
+                    val curX = mBubblePositions[idxCur * mDimPosition + 0]
+                    val curY = mBubblePositions[idxCur * mDimPosition + 1]
 
                     for (idxSearch in 0 until numBubbles) {
                         if (0 == labeled[idxSearch]) {
-                            val dx = mBubblePositions[idxSearch * mDIM_POSITION + 0] - curX
-                            val dy = mBubblePositions[idxSearch * mDIM_POSITION + 1] - curY
+                            val dx = mBubblePositions[idxSearch * mDimPosition + 0] - curX
+                            val dy = mBubblePositions[idxSearch * mDimPosition + 1] - curY
                             val sqrDist = (dx * dx) + (dy * dy)
                             if (sqrDist <= contactThres * contactThres) {
                                 stackIndex.add(idxSearch)       // push
                                 labeled[idxSearch] = label
-                                maxY = max(maxY, mBubblePositions[idxSearch * mDIM_POSITION + 1])
+                                maxY = max(maxY, mBubblePositions[idxSearch * mDimPosition + 1])
                             }
                         }
                     }
@@ -312,14 +314,12 @@ class GameRenderer(texture: Bitmap) : GLSurfaceView.Renderer {
         var idxCollide = -1
 
         // Test collision with other bubbles
-        val curX = mProjectileObject.mInstancePositions[0]
-        val curY = mProjectileObject.mInstancePositions[1]
         var closestSqrDist = 1000.0f    // The distance to the closest bubble.
-        val numBubbles = mBubblePositions.count()/mDIM_POSITION
+        val numBubbles = mBubblePositions.count()/mDimPosition
 
         for(idxBubble in 0 until numBubbles){
-            val bubbleX = mBubblePositions[idxBubble * 4 + 0]
-            val bubbleY = mBubblePositions[idxBubble * 4 + 1]
+            val bubbleX = mBubblePositions[idxBubble * mDimPosition + 0]
+            val bubbleY = mBubblePositions[idxBubble * mDimPosition + 1]
             val dx = curX - bubbleX
             val dy = curY - bubbleY
             val sqrDist = (dx*dx) + (dy*dy)
@@ -336,10 +336,10 @@ class GameRenderer(texture: Bitmap) : GLSurfaceView.Renderer {
                     bubbleY - (mBubbleDiameter * sin(mAlignAngle))
                 }
 
-                var valid : Boolean = true
+                var valid = true
                 for(idxTest in 0 until numBubbles){
-                    val testDX = mBubblePositions[idxTest * 4 + 0] - newX
-                    val testDY = mBubblePositions[idxTest * 4 + 1] - newY
+                    val testDX = mBubblePositions[idxTest * mDimPosition + 0] - newX
+                    val testDY = mBubblePositions[idxTest * mDimPosition + 1] - newY
                     val testDist = testDX*testDX + testDY*testDY
                     if(testDist < contactThreshold*contactThreshold){
                         valid = false
@@ -359,7 +359,6 @@ class GameRenderer(texture: Bitmap) : GLSurfaceView.Renderer {
      * This method is called for each redraw of the view.
      * */
     override fun onDrawFrame(unused: GL10?) {
-        val scratch = FloatArray(16)
 
         // Redraw background color
         GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT)
@@ -369,13 +368,26 @@ class GameRenderer(texture: Bitmap) : GLSurfaceView.Renderer {
         Matrix.multiplyMM(mPMatrix, 0, mProjectionMatrix, 0, mViewMatrix, 0)
 
         if(GameMode.INITIALIZE == mGameMode){
-            for(i in 0 until mCols){
-                mBubblePositions.add(mMinWorldX + mBubbleRadius + mBubbleDiameter*i.toFloat())
-                mBubblePositions.add(mMaxWorldY - mBubbleRadius)
+
+            var x = mBubbleRadius
+            var y = mBubbleRadius
+            for(i in 0 until mLevel){
+                mBubblePositions.add(mMinWorldX + x)
+                mBubblePositions.add(mMaxWorldY - y)
                 mBubblePositions.add(0.0f)
                 mBubblePositions.add(0.0f)
 
-                val color = random.nextInt(4)
+                x += mBubbleDiameter
+                val eps = 0.001
+                if(x >= (mMaxWorldX-mMinWorldX)+mBubbleRadius - eps){
+                    x = mBubbleDiameter
+                    y += mBubbleDiameter * sin(mAlignAngle)
+                }else if(x >= (mMaxWorldX-mMinWorldX) - eps){
+                    x = mBubbleRadius
+                    y += mBubbleDiameter * sin(mAlignAngle)
+                }
+
+                val color = i % BubbleType.NUM_COLORS.ordinal
                 mBubbleColors.add(color)
 
                 val colorRGB = colorCodeToRGB(color)
@@ -383,7 +395,6 @@ class GameRenderer(texture: Bitmap) : GLSurfaceView.Renderer {
                 mBubbleColorsRGB.add(colorRGB[1])
                 mBubbleColorsRGB.add(colorRGB[2])
                 mBubbleColorsRGB.add(colorRGB[3])
-
             }
             mBubbleObjects.mInstancePositions = mBubblePositions.toFloatArray()
             mBubbleObjects.mInstanceColors = mBubbleColorsRGB.toFloatArray()
@@ -404,16 +415,14 @@ class GameRenderer(texture: Bitmap) : GLSurfaceView.Renderer {
                 mProjectileAngle *= -1.0f
             }
 
-            var newX = -100f
-            var newY = -100f
             val curX = mProjectileObject.mInstancePositions[0]
             val curY = mProjectileObject.mInstancePositions[1]
 
             // If the bubble is out of world.
             if((curY + mBubbleRadius) >= mMaxWorldY){
 
-                newX = floor(curX / mBubbleDiameter) * mBubbleDiameter + mBubbleRadius
-                newY = mMaxWorldY - mBubbleRadius
+                val newX = floor(curX / mBubbleDiameter) * mBubbleDiameter + mBubbleRadius
+                val newY = mMaxWorldY - mBubbleRadius
 
                 mBubblePositions.add(newX)
                 mBubblePositions.add(newY)
@@ -432,24 +441,21 @@ class GameRenderer(texture: Bitmap) : GLSurfaceView.Renderer {
 
             }else{
                 // Test collision with other bubbles
-                val contactThreshold = mBubbleDiameter * 0.9f
-                val occupancyThreshold = mBubbleDiameter * 1.0f
-
-                val idxCollide = checkCollision(curX, curY, contactThreshold)
+                val idxCollide = checkCollision(curX, curY, mContactThreshold)
                 if(idxCollide >= 0){
-                    val closestBubbleX = mBubblePositions[idxCollide * 4 + 0]
-                    val closestBubbleY = mBubblePositions[idxCollide * 4 + 1]
+                    val closestBubbleX = mBubblePositions[idxCollide * mDimPosition + 0]
+                    val closestBubbleY = mBubblePositions[idxCollide * mDimPosition + 1]
 
-                    if(curX < closestBubbleX){
-                        newX = closestBubbleX - (mBubbleDiameter * cos(mAlignAngle))
+                    val newX = if(curX < closestBubbleX){
+                        closestBubbleX - (mBubbleDiameter * cos(mAlignAngle))
                     }else{
-                        newX = closestBubbleX + (mBubbleDiameter * cos(mAlignAngle))
+                        closestBubbleX + (mBubbleDiameter * cos(mAlignAngle))
                     }
 
-                    if(curY > closestBubbleY) {
-                        newY = closestBubbleY + (mBubbleDiameter * sin(mAlignAngle))
+                    val newY = if(curY > closestBubbleY) {
+                        closestBubbleY + (mBubbleDiameter * sin(mAlignAngle))
                     }else{
-                        newY = closestBubbleY - (mBubbleDiameter * sin(mAlignAngle))
+                        closestBubbleY - (mBubbleDiameter * sin(mAlignAngle))
                     }
 
                     mBubblePositions.add(newX)
@@ -471,7 +477,7 @@ class GameRenderer(texture: Bitmap) : GLSurfaceView.Renderer {
         }
         else if(GameMode.EXPLODING == mGameMode){
             if(mEventTime < 1.0f) {
-                checkExplodingCondition((mBubblePositions.count() / mDIM_POSITION) - 1)
+                checkExplodingCondition((mBubblePositions.count() / mDimPosition) - 1)
                 checkFalling()
             }
             mEventTime += 1.0f
@@ -483,11 +489,11 @@ class GameRenderer(texture: Bitmap) : GLSurfaceView.Renderer {
         else if(GameMode.FALLING == mGameMode) {
 
             var maxY = mMinWorldY - 1.0f
-            val numBubbles = mBubblePositions.count()/mDIM_POSITION
+            val numBubbles = mBubblePositions.count()/mDimPosition
             for(i in 0 until numBubbles) {
                 if(BubbleStatus.FALLING == mBubbleStatus[i]){
-                    mBubblePositions[i * mDIM_POSITION + 1] -= mVelocity * 2.0f
-                    val y = mBubblePositions[i * mDIM_POSITION + 1]
+                    mBubblePositions[i * mDimPosition + 1] -= mVelocity * 2.0f
+                    val y = mBubblePositions[i * mDimPosition + 1]
                     maxY = max(maxY, y)
                 }
             }
@@ -497,8 +503,8 @@ class GameRenderer(texture: Bitmap) : GLSurfaceView.Renderer {
                 for(i in numBubbles-1 downTo 0){
                     if(BubbleStatus.FALLING == mBubbleStatus[i]){
                         for(idxCoord in 3 downTo 0){
-                            mBubblePositions.removeAt(i * mDIM_POSITION + idxCoord)
-                            mBubbleColorsRGB.removeAt(i * mDIM_POSITION + idxCoord)
+                            mBubblePositions.removeAt(i * mDimPosition + idxCoord)
+                            mBubbleColorsRGB.removeAt(i * mDimPosition + idxCoord)
                         }
                         mBubbleColors.removeAt(i)
                     }
@@ -509,20 +515,18 @@ class GameRenderer(texture: Bitmap) : GLSurfaceView.Renderer {
 
         mBubbleObjects.mInstancePositions = mBubblePositions.toFloatArray()
         mBubbleObjects.mInstanceColors = mBubbleColorsRGB.toFloatArray()
-        mBubbleObjects.mNumInstances = mBubblePositions.count() / mDIM_POSITION
+        mBubbleObjects.mNumInstances = mBubblePositions.count() / mDimPosition
         mBubbleObjects.draw(mPMatrix, mBubbleRadius)
 
         if(GameMode.READY == mGameMode) {
             mProjectileAngle = mFireAngle
-            val startY = mMaxWorldY - (mRows.toFloat() * mBubbleDiameter)
-
             mTargetingLine.setOrigin(mOrigin)
             mTargetingLine.draw(mPMatrix, mFireAngle)
         }
         else if (GameMode.EXPLODING == mGameMode) {
             mParticleObjects.mInstancePositions = mExplodingPositions.toFloatArray()
             mParticleObjects.mInstanceColors = mExplodingColorsRGB.toFloatArray()
-            mParticleObjects.mNumInstances = mExplodingPositions.count() / mDIM_POSITION
+            mParticleObjects.mNumInstances = mExplodingPositions.count() / mDimPosition
 
             mParticleObjects.draw(mPMatrix, mBubbleRadius, mEventTime)
         }
@@ -533,18 +537,26 @@ class GameRenderer(texture: Bitmap) : GLSurfaceView.Renderer {
 
         mTextObject.setPosition(floatArrayOf(mMinWorldX, mMaxWorldY + mTopMarginY, 0.0f, 0.0f))
 
+        val widthScore = 0.15f
+        val heightScore = 0.3f
         val strScore = "%05d".format(mScore)
-        mTextObject.draw(mPMatrix, strScore, mMinWorldX, mMaxWorldY + mTopMarginY, 0.0f, 0.15f, 0.3f, floatArrayOf(1.0f, 1.0f, 1.0f, 1.0f))
+        mTextObject.draw(mPMatrix, strScore, mMinWorldX, mMaxWorldY + mTopMarginY, 0.0f, widthScore, heightScore, floatArrayOf(1.0f, 1.0f, 1.0f, 1.0f))
 
+        val widthLevel = 0.10f
+        val heightLevel = 0.2f
         val strLevel = "Lv.%d".format(mLevel)
-        mTextObject.draw(mPMatrix, strLevel, mMinWorldX + 0.15f*7.0f, mMaxWorldY + mTopMarginY, 0.0f, 0.15f, 0.3f, floatArrayOf(1.0f, 1.0f, 1.0f, 1.0f))
+        mTextObject.draw(mPMatrix, strLevel, mMinWorldX + widthScore*7.0f, mMaxWorldY + mTopMarginY, 0.0f, widthLevel, heightLevel, floatArrayOf(1.0f, 1.0f, 1.0f, 1.0f))
 
-        if(GameMode.GAMEOVER == mGameMode){
-            mTextObject.draw(mPMatrix, "GameOver!", -0.15f * 4.0f, 0.0f, 0.0f, 0.15f, 0.3f, floatArrayOf(1.0f, 0.0f, 0.0f, 1.0f))
+        if(GameMode.GAME_OVER == mGameMode){
+            val widthGameOver = 0.15f
+            val heightGameOver = 0.3f
+            mTextObject.draw(mPMatrix, "GameOver!", -widthGameOver * 4.0f, 0.0f, 0.0f, 0.15f, heightGameOver, floatArrayOf(1.0f, 0.0f, 0.0f, 1.0f))
         }
 
-        if(GameMode.STAGE_CLEAR == mGameMode){
-            mTextObject.draw(mPMatrix, "Stage Clear!", -0.15f * 6.0f, 0.0f, 0.0f, 0.15f, 0.3f, floatArrayOf(0.0f, 0.1f, 1.0f, 1.0f))
+        if(GameMode.LEVEL_CLEAR == mGameMode){
+            val widthLevelClear = 0.15f
+            val heightLevelClear = 0.3f
+            mTextObject.draw(mPMatrix, "Level Clear!", -widthLevelClear * 6.0f, 0.0f, 0.0f, widthLevelClear, heightLevelClear, floatArrayOf(0.0f, 0.1f, 1.0f, 1.0f))
         }
     }
 
@@ -554,6 +566,10 @@ class GameRenderer(texture: Bitmap) : GLSurfaceView.Renderer {
     fun screenTabEvent(){
         if(mGameMode == GameMode.READY) {
             mGameMode = GameMode.FIRING
+        }
+        else if(mGameMode == GameMode.LEVEL_CLEAR){
+            mLevel += 1
+            mGameMode = GameMode.INITIALIZE
         }
     }
 
