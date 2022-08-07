@@ -72,7 +72,7 @@ class Particle : Bubble() {
         }
 
         GLES30.glGetUniformLocation(mProgram, "vInstancePositions").also {
-            GLES30.glUniform4fv(it, mNumInstances, mInstancePositions, 0)
+            GLES30.glUniform4fv(it, mNumInstances, mInstancePositions.toFloatArray(), 0)
         }
 
         mVertexNormalHandle = GLES30.glGetAttribLocation(mProgram, "vNormal").also {
@@ -83,7 +83,7 @@ class Particle : Bubble() {
         // get handle to fragment shader's vColor member
         GLES30.glGetUniformLocation(mProgram, "vInstanceColors").also {
             // Set color for drawing the triangle
-            GLES30.glUniform4fv(it, mNumInstances, mInstanceColors, 0)
+            GLES30.glUniform4fv(it, mNumInstances, mInstanceColors.toFloatArray(), 0)
         }
 
         mScale = floatArrayOf(scale, scale, scale, 1.0f)

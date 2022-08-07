@@ -7,7 +7,6 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
 
-
 open class Bubble {
     // number of coordinates per vertex in this array
     protected val COORDS_PER_VERTEX = 3
@@ -17,10 +16,10 @@ open class Bubble {
     open var mNumInstances: Int = 1
 
     // Set color with red, green, blue and alpha (opacity) values
-    open var mInstanceColors = floatArrayOf(
+    open var mInstanceColors : MutableList<Float> = arrayListOf(
         0.63671875f, 0.76953125f, 0.22265625f, 0.1f,
     )
-    open var mInstancePositions = floatArrayOf(
+    open var mInstancePositions : MutableList<Float> = arrayListOf(
         0.0f,  -1.0f, 0.0f, 0.0f,
     )
     open var mScale = floatArrayOf(
@@ -131,7 +130,7 @@ open class Bubble {
         }
 
         GLES30.glGetUniformLocation(mProgram, "vInstancePositions").also {
-            GLES30.glUniform4fv(it, mNumInstances, mInstancePositions, 0)
+            GLES30.glUniform4fv(it, mNumInstances, mInstancePositions.toFloatArray(), 0)
         }
 
         mVertexNormalHandle = GLES30.glGetAttribLocation(mProgram, "vNormal").also {
@@ -143,7 +142,7 @@ open class Bubble {
         // get handle to fragment shader's vColor member
         GLES30.glGetUniformLocation(mProgram, "vInstanceColors").also {
             // Set color for drawing the triangle
-            GLES30.glUniform4fv(it, mNumInstances, mInstanceColors, 0)
+            GLES30.glUniform4fv(it, mNumInstances, mInstanceColors.toFloatArray(), 0)
         }
 
         mScale = floatArrayOf(scale, scale, scale, 1.0f)
