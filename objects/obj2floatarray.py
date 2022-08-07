@@ -47,8 +47,8 @@ class Face:
             self.vn[2] = int(v3[2]) - 1
 
 if __name__ == '__main__':
-    obj_file_path = 'bubble.obj'
-    model_class_path = 'model.kt'
+    obj_file_path = 'bomb.obj'
+    model_class_path = 'bomb.kt'
     scale = 1.0
 
     list_vertex = []
@@ -80,11 +80,10 @@ if __name__ == '__main__':
                 list_vertex_normal.append(vertex)
 
             # vertex texture
-            elif len(tokens) == 4 and tokens[0] == 'vt':
-                x = float(tokens[1])
-                y = float(tokens[2])
-                z = float(tokens[3])
-                vertex = Vertex3D(x, y, z)
+            elif len(tokens) == 3 and tokens[0] == 'vt':
+                u = float(tokens[1])
+                v = float(tokens[2])
+                vertex = Vertex2D(u, v)
                 list_vertex_texture.append(vertex)
 
             # face element
@@ -142,13 +141,13 @@ if __name__ == '__main__':
                 face = list_face[i]
                 
                 v = list_vertex_texture[face.vt[0]]
-                f.write('            {:f}f, {:f}f, {:f}f, '.format(v.x, v.y, v.z))
+                f.write('            {:f}f, {:f}f, '.format(v.u, v.v))
 
                 v = list_vertex_texture[face.vt[1]]
-                f.write('{:f}f, {:f}f, {:f}f, '.format(v.x, v.y, v.z))
+                f.write('{:f}f, {:f}f, '.format(v.u, v.v))
 
                 v = list_vertex_texture[face.vt[2]]
-                f.write('{:f}f, {:f}f, {:f}f'.format(v.x, v.y, v.z))
+                f.write('{:f}f, {:f}f'.format(v.u, v.v))
 
                 if i < len(list_face)-1:            
                     f.write(',')
