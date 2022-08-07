@@ -2,20 +2,17 @@ package com.example.bubble
 
 import android.opengl.GLES30
 import android.util.Log
+import com.example.bubble.models.BubbleModel
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
 
 
-open class BasicObject {
+open class BaseBubble {
     // number of coordinates per vertex in this array
     protected val COORDS_PER_VERTEX = 3
-    open val mVertexCoords = floatArrayOf(
-        -0.013635f, 0.483420f, -0.888825f, 0.292166f, 0.099052f, -0.961172f, -0.089589f, 0.090364f, -1.000517f,
-    )
-    open val mVertexNormal = floatArrayOf(
-        0.093400f, 0.255400f, -0.962300f, 0.093400f, 0.255400f, -0.962300f, 0.093400f, 0.255400f, -0.962300f,
-    )
+    open val mVertexCoords = BubbleModel.mVertexCoords
+    open val mVertexNormal = BubbleModel.mVertexNormal
 
     open var mNumInstances: Int = 1
 
@@ -46,8 +43,6 @@ open class BasicObject {
                 "}"
 
     open val mVertexShaderCode =
-            // This matrix member variable provides a hook to manipulate
-                // the coordinates of the objects that use this vertex shader
                 "#version 300 es\n" +
                 "uniform mat4 uMVPMatrix;" +
                 "uniform vec4 vScale;" +
@@ -65,18 +60,13 @@ open class BasicObject {
                 "  vColor = vInstanceColors[gl_InstanceID];" +
                 "}"
 
-    // Use to access and set the view transformation
-    protected var vPMatrixHandle: Int = 0
     protected var mProgram: Int = 0
 
     protected var mVertexBuffer: FloatBuffer? = null
     protected var mNormalBuffer: FloatBuffer? = null
 
     protected var mPositionHandle: Int = 0
-    protected var mColorHandle: Int = 0
     protected var mVertexNormalHandle: Int = 0
-    protected var mInstancePositionsHandle: Int = 0
-    protected var mScaleHandle: Int = 0
 
     protected val mVertexStride: Int = COORDS_PER_VERTEX * 4 // 4 bytes per vertex
     protected var mVertexCount: Int = 0
@@ -129,7 +119,7 @@ open class BasicObject {
         GLES30.glUseProgram(mProgram)
 
         // get handle to shape's transformation matrix
-        vPMatrixHandle = GLES30.glGetUniformLocation(mProgram, "uMVPMatrix").also {
+        GLES30.glGetUniformLocation(mProgram, "uMVPMatrix").also {
             // Pass the projection and view transformation to the shader
             GLES30.glUniformMatrix4fv(it, 1, false, mvpMatrix, 0)
         }
@@ -140,7 +130,7 @@ open class BasicObject {
             GLES30.glVertexAttribPointer(it, COORDS_PER_VERTEX, GLES30.GL_FLOAT, false, mVertexStride, mVertexBuffer)
         }
 
-        mInstancePositionsHandle = GLES30.glGetUniformLocation(mProgram, "vInstancePositions").also {
+        GLES30.glGetUniformLocation(mProgram, "vInstancePositions").also {
             GLES30.glUniform4fv(it, mNumInstances, mInstancePositions, 0)
         }
 
@@ -151,13 +141,13 @@ open class BasicObject {
 
 
         // get handle to fragment shader's vColor member
-        mColorHandle = GLES30.glGetUniformLocation(mProgram, "vInstanceColors").also {
+        GLES30.glGetUniformLocation(mProgram, "vInstanceColors").also {
             // Set color for drawing the triangle
             GLES30.glUniform4fv(it, mNumInstances, mInstanceColors, 0)
         }
 
         mScale = floatArrayOf(scale, scale, scale, 1.0f)
-        mScaleHandle = GLES30.glGetUniformLocation(mProgram, "vScale").also {
+        GLES30.glGetUniformLocation(mProgram, "vScale").also {
             GLES30.glUniform4fv(it, 1, mScale, 0)
         }
 
@@ -166,11 +156,10 @@ open class BasicObject {
 
         // Disable vertex array
         GLES30.glDisableVertexAttribArray(mPositionHandle)
-        GLES30.glDisableVertexAttribArray(mInstancePositionsHandle)
-        GLES30.glDisableVertexAttribArray(mColorHandle)
+        GLES30.glDisableVertexAttribArray(mVertexNormalHandle)
     }
 
-    fun loadShader(type: Int, shaderCode: String): Int {
+    private fun loadShader(type: Int, shaderCode: String): Int {
 
         // create a vertex shader type (GLES30.GL_VERTEX_SHADER)
         // or a fragment shader type (GLES30.GL_FRAGMENT_SHADER)

@@ -37,11 +37,51 @@ class TargetingLine {
         "}"
 
 
-    // Use to access and set the view transformation
-    private var vPMatrixHandle: Int = 0
-    private var vRotationMatrixHandle: Int = 0
-
     private var mProgram: Int
+    private var mVertexCoords = floatArrayOf(
+         0.0f,  1.0f, 0.0f,
+         2.0f/tan(60.0f * PI.toFloat() / 180.0f), -1.0f, 0.0f,
+         -2.0f/tan(60.0f * PI.toFloat() / 180.0f), -1.0f, 0.0f,
+    )
+
+    private var mNumInstances: Int = 4
+
+    // Set color with red, green, blue and alpha (opacity) values
+    private val mInstanceColors = floatArrayOf(
+        0.0f, 0.0f, 1.0f, 1.0f,
+        0.5f, 1.0f, 0.5f, 1.0f,
+        1.0f, 1.0f, 0.0f, 1.0f,
+        1.0f, 0.0f, 0.0f, 1.0f,
+    )
+    private var mInstancePositions = floatArrayOf(
+        0.0f, 0.2f, 0.0f, 0.0f,
+        0.0f, 0.4f, 0.0f, 0.0f,
+        0.0f, 0.6f, 0.0f, 0.0f,
+        0.0f, 0.8f, 0.0f, 0.0f,
+    )
+
+    private var mOrigin = floatArrayOf(
+        0.0f, 0.0f, 0.0f, 0.0f
+    )
+
+    private var mRotationMatrix = FloatArray(16)
+    private var mPositionHandle: Int = 0
+
+    private val vertexCount: Int = mVertexCoords.size / COORDS_PER_VERTEX
+    private val vertexStride: Int = COORDS_PER_VERTEX * 4 // 4 bytes per vertex
+
+    private var mVertexBuffer: FloatBuffer =
+        // (number of coordinate values * 4 bytes per float)
+        ByteBuffer.allocateDirect(mVertexCoords.size * 4).run {
+            // use the device hardware's native byte order
+            order(ByteOrder.nativeOrder())
+            // create a floating point buffer from the ByteBuffer
+            asFloatBuffer().apply {
+                put(mVertexCoords)		// add the coordinates to the FloatBuffer
+                position(0)	// set the buffer to read the first coordinate
+            }
+        }
+
 
     init {
         val vertexShader: Int = loadShader(GLES30.GL_VERTEX_SHADER, mVertexShaderCode)
@@ -58,47 +98,7 @@ class TargetingLine {
 
     }
 
-    var mVertexCoords = floatArrayOf(
-         0.0f,  1.0f, 0.0f,
-         2.0f/tan(60.0f * PI.toFloat() / 180.0f), -1.0f, 0.0f,
-         -2.0f/tan(60.0f * PI.toFloat() / 180.0f), -1.0f, 0.0f,
-    )
-
-    var mNumInstances: Int = 4
-
-    // Set color with red, green, blue and alpha (opacity) values
-    val mInstanceColors = floatArrayOf(
-        0.0f, 0.0f, 1.0f, 1.0f,
-        0.5f, 1.0f, 0.5f, 1.0f,
-        1.0f, 1.0f, 0.0f, 1.0f,
-        1.0f, 0.0f, 0.0f, 1.0f,
-    )
-    var mInstancePositions = floatArrayOf(
-        0.0f, 0.2f, 0.0f, 0.0f,
-        0.0f, 0.4f, 0.0f, 0.0f,
-        0.0f, 0.6f, 0.0f, 0.0f,
-        0.0f, 0.8f, 0.0f, 0.0f,
-    )
-
-    var mOrigin = floatArrayOf(
-        0.0f, 0.0f, 0.0f, 0.0f
-    )
-
-    private var mRotationMatrix = FloatArray(16)
-
-    private var mVertexBuffer: FloatBuffer =
-        // (number of coordinate values * 4 bytes per float)
-        ByteBuffer.allocateDirect(mVertexCoords.size * 4).run {
-            // use the device hardware's native byte order
-            order(ByteOrder.nativeOrder())
-            // create a floating point buffer from the ByteBuffer
-            asFloatBuffer().apply {
-                put(mVertexCoords)		// add the coordinates to the FloatBuffer
-                position(0)	// set the buffer to read the first coordinate
-            }
-        }
-
-    fun loadShader(type: Int, shaderCode: String): Int {
+    private fun loadShader(type: Int, shaderCode: String): Int {
 
         // create a vertex shader type (GLES30.GL_VERTEX_SHADER)
         // or a fragment shader type (GLES30.GL_FRAGMENT_SHADER)
@@ -114,14 +114,6 @@ class TargetingLine {
         }
     }
 
-    private var mPositionHandle: Int = 0
-    private var mColorHandle: Int = 0
-    private var mInstancePositionsHandle: Int = 0
-    private var mOriginHandle: Int = 0
-
-    private val vertexCount: Int = mVertexCoords.size / COORDS_PER_VERTEX
-    private val vertexStride: Int = COORDS_PER_VERTEX * 4 // 4 bytes per vertex
-
     fun draw(mvpMatrix: FloatArray, angle:Float) {
 
         Matrix.setRotateM(mRotationMatrix, 0, angle * 180.0f / PI.toFloat(), 0.0f, 0.0f, 1.0f)
@@ -129,19 +121,23 @@ class TargetingLine {
         // Add program to OpenGL ES environment
         GLES30.glUseProgram(mProgram)
 
-        vRotationMatrixHandle = GLES30.glGetUniformLocation(mProgram, "uRotationMatrix").also{
+        GLES30.glGetUniformLocation(mProgram, "uRotationMatrix").also{
             GLES30.glUniformMatrix4fv(it, 1, false, mRotationMatrix, 0)
         }
 
         // get handle to vertex shader's vOrigin member
-        mOriginHandle = GLES30.glGetUniformLocation(mProgram, "vOrigin").also {
+        GLES30.glGetUniformLocation(mProgram, "vOrigin").also {
             // Set color for drawing the triangle
             GLES30.glUniform4fv(it, 1, mOrigin, 0)
         }
 
         // get handle to shape's transformation matrix
-        vPMatrixHandle = GLES30.glGetUniformLocation(mProgram, "uMVPMatrix").also{
+        GLES30.glGetUniformLocation(mProgram, "uMVPMatrix").also{
             GLES30.glUniformMatrix4fv(it, 1, false, mvpMatrix, 0)
+        }
+
+        GLES30.glGetUniformLocation(mProgram, "vInstancePositions").also {
+            GLES30.glUniform4fv(it, mNumInstances, mInstancePositions, 0)
         }
 
         // get handle to vertex shader's vPosition member
@@ -150,24 +146,17 @@ class TargetingLine {
             GLES30.glVertexAttribPointer(it, COORDS_PER_VERTEX, GLES30.GL_FLOAT, false, vertexStride, mVertexBuffer)
         }
 
-        mInstancePositionsHandle = GLES30.glGetUniformLocation(mProgram, "vInstancePositions").also {
-            GLES30.glUniform4fv(it, mNumInstances, mInstancePositions, 0)
-        }
-
         // get handle to fragment shader's vColor member
-        mColorHandle = GLES30.glGetUniformLocation(mProgram, "vInstanceColors").also {
+        GLES30.glGetUniformLocation(mProgram, "vInstanceColors").also {
             // Set color for drawing the triangle
             GLES30.glUniform4fv(it, mNumInstances, mInstanceColors, 0)
         }
-
 
         // Draw the triangle
         GLES30.glDrawArraysInstanced(GLES30.GL_TRIANGLES, 0, vertexCount, mNumInstances)
 
         // Disable vertex array
         GLES30.glDisableVertexAttribArray(mPositionHandle)
-        GLES30.glDisableVertexAttribArray(mInstancePositionsHandle)
-        GLES30.glDisableVertexAttribArray(mColorHandle)
     }
 
     fun setOrigin(origin: FloatArray){

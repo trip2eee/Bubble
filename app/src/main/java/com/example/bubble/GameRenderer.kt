@@ -41,10 +41,10 @@ class GameRenderer(texture: Bitmap) : GLSurfaceView.Renderer {
     private val mProjectionMatrix = FloatArray(16)
     private val mViewMatrix = FloatArray(16)
 
-    private lateinit var mBubbleObjects: BubbleObject
-    private lateinit var mProjectileObject: ProjectileObject
+    private lateinit var mBubbleObjects: Bubble
+    private lateinit var mProjectileObject: Projectile
     private lateinit var mTargetingLine: TargetingLine
-    private lateinit var mParticleObjects: ParticleObject
+    private lateinit var mParticleObjects: Particle
     private lateinit var mTextObject: TextObject
 
     private var mBubblePositions: MutableList<Float> = arrayListOf()
@@ -104,13 +104,13 @@ class GameRenderer(texture: Bitmap) : GLSurfaceView.Renderer {
         GLES30.glEnable(GLES30.GL_BLEND)
         GLES30.glBlendFunc(GLES30.GL_SRC_ALPHA, GLES30.GL_ONE_MINUS_SRC_ALPHA)
 
-        mBubbleObjects = BubbleObject()
+        mBubbleObjects = Bubble()
         mBubbleObjects.initialize()
 
-        mProjectileObject = ProjectileObject()
+        mProjectileObject = Projectile()
         mProjectileObject.initialize()
 
-        mParticleObjects = ParticleObject()
+        mParticleObjects = Particle()
         mParticleObjects.initialize()
 
         mTargetingLine = TargetingLine()
@@ -534,8 +534,6 @@ class GameRenderer(texture: Bitmap) : GLSurfaceView.Renderer {
         if(GameMode.READY == mGameMode || GameMode.FIRING == mGameMode) {
             mProjectileObject.draw(mPMatrix, mBubbleRadius)
         }
-
-        mTextObject.setPosition(floatArrayOf(mMinWorldX, mMaxWorldY + mTopMarginY, 0.0f, 0.0f))
 
         val widthScore = 0.15f
         val heightScore = 0.3f

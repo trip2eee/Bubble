@@ -2,7 +2,13 @@ package com.example.bubble
 
 import android.opengl.GLES30
 
-class ParticleObject : BasicObject() {
+class Particle : BaseBubble() {
+    override val mVertexCoords = floatArrayOf(
+        -0.013635f, 0.483420f, -0.888825f, 0.292166f, 0.099052f, -0.961172f, -0.089589f, 0.090364f, -1.000517f,
+    )
+    override val mVertexNormal = floatArrayOf(
+        0.093400f, 0.255400f, -0.962300f, 0.093400f, 0.255400f, -0.962300f, 0.093400f, 0.255400f, -0.962300f,
+    )
 
     override val mFragmentShaderCode =
                 "#version 300 es\n" +
@@ -46,18 +52,16 @@ class ParticleObject : BasicObject() {
                 "  vColor = vInstanceColors[gl_InstanceID / 10];" +
                 "}"
 
-    private var mTimeHandle : Int = 0
-
     fun draw(mvpMatrix: FloatArray, scale: Float, time: Float) {
         // Add program to OpenGL ES environment
         GLES30.glUseProgram(mProgram)
 
-        mTimeHandle = GLES30.glGetUniformLocation(mProgram, "fTime").also {
+        GLES30.glGetUniformLocation(mProgram, "fTime").also {
             GLES30.glUniform1f(it, time)
         }
 
         // get handle to shape's transformation matrix
-        vPMatrixHandle = GLES30.glGetUniformLocation(mProgram, "uMVPMatrix").also {
+        GLES30.glGetUniformLocation(mProgram, "uMVPMatrix").also {
             GLES30.glUniformMatrix4fv(it, 1, false, mvpMatrix, 0)
         }
 
@@ -67,7 +71,7 @@ class ParticleObject : BasicObject() {
             GLES30.glVertexAttribPointer(it, COORDS_PER_VERTEX, GLES30.GL_FLOAT, false, mVertexStride, mVertexBuffer)
         }
 
-        mInstancePositionsHandle = GLES30.glGetUniformLocation(mProgram, "vInstancePositions").also {
+        GLES30.glGetUniformLocation(mProgram, "vInstancePositions").also {
             GLES30.glUniform4fv(it, mNumInstances, mInstancePositions, 0)
         }
 
@@ -77,13 +81,13 @@ class ParticleObject : BasicObject() {
         }
 
         // get handle to fragment shader's vColor member
-        mColorHandle = GLES30.glGetUniformLocation(mProgram, "vInstanceColors").also {
+        GLES30.glGetUniformLocation(mProgram, "vInstanceColors").also {
             // Set color for drawing the triangle
             GLES30.glUniform4fv(it, mNumInstances, mInstanceColors, 0)
         }
 
         mScale = floatArrayOf(scale, scale, scale, 1.0f)
-        mScaleHandle = GLES30.glGetUniformLocation(mProgram, "vScale").also {
+        GLES30.glGetUniformLocation(mProgram, "vScale").also {
             GLES30.glUniform4fv(it, 1, mScale, 0)
         }
 
@@ -92,8 +96,7 @@ class ParticleObject : BasicObject() {
 
         // Disable vertex array
         GLES30.glDisableVertexAttribArray(mPositionHandle)
-        GLES30.glDisableVertexAttribArray(mInstancePositionsHandle)
-        GLES30.glDisableVertexAttribArray(mColorHandle)
+        GLES30.glDisableVertexAttribArray(mVertexNormalHandle)
     }
 
 }

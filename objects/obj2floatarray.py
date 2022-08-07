@@ -2,10 +2,7 @@
 This script converts Wavefront (.obj) files into float array of Kotlin.
 """
 
-from lib2to3.pgen2 import token
 import sys
-
-from numpy import array
 
 class Vertex3D:
     def __init__(self, x, y, z):
@@ -51,11 +48,12 @@ class Face:
 
 if __name__ == '__main__':
     obj_file_path = 'bubble.obj'
-    array_file_path = 'array.kt'
+    model_class_path = 'model.kt'
     scale = 1.0
 
     list_vertex = []
     list_vertex_normal = []
+    list_vertex_texture = []
     list_face = []
 
     with open(obj_file_path, 'r') as f:
@@ -81,6 +79,14 @@ if __name__ == '__main__':
                 vertex = Vertex3D(x, y, z)
                 list_vertex_normal.append(vertex)
 
+            # vertex texture
+            elif len(tokens) == 4 and tokens[0] == 'vt':
+                x = float(tokens[1])
+                y = float(tokens[2])
+                z = float(tokens[3])
+                vertex = Vertex3D(x, y, z)
+                list_vertex_texture.append(vertex)
+
             # face element
             elif len(tokens) == 4 and tokens[0] == 'f':
                 v1 = tokens[1]
@@ -90,13 +96,16 @@ if __name__ == '__main__':
                 list_face.append(face)
 
 
-    with open(array_file_path, 'w') as f:
-        f.write('val vertexCoords = floatArrayOf(\n')
+    with open(model_class_path, 'w') as f:
+
+        f.write('class Model {\n')
+        f.write('    companion object {\n')
+        f.write('        val mVertexCoords = floatArrayOf(\n')
         for i in range(len(list_face)):
             face = list_face[i]
 
             v = list_vertex[face.v[0]]
-            f.write('    {:f}f, {:f}f, {:f}f, '.format(v.x, v.y, v.z))
+            f.write('            {:f}f, {:f}f, {:f}f, '.format(v.x, v.y, v.z))
 
             v = list_vertex[face.v[1]]
             f.write('{:f}f, {:f}f, {:f}f, '.format(v.x, v.y, v.z))
@@ -107,14 +116,14 @@ if __name__ == '__main__':
             if i < len(list_face)-1:            
                 f.write(',')
             f.write('\n')
-        f.write(')\n')
+        f.write('        )\n')
 
-        f.write('val vertexNormal = floatArrayOf(\n')
+        f.write('        val mVertexNormal = floatArrayOf(\n')
         for i in range(len(list_face)):
             face = list_face[i]
             
             v = list_vertex_normal[face.vn[0]]
-            f.write('    {:f}f, {:f}f, {:f}f, '.format(v.x, v.y, v.z))
+            f.write('            {:f}f, {:f}f, {:f}f, '.format(v.x, v.y, v.z))
 
             v = list_vertex_normal[face.vn[1]]
             f.write('{:f}f, {:f}f, {:f}f, '.format(v.x, v.y, v.z))
@@ -125,7 +134,28 @@ if __name__ == '__main__':
             if i < len(list_face)-1:            
                 f.write(',')
             f.write('\n')
-        f.write(')\n')
+        f.write('        )\n')
+
+        f.write('        val mVertexTexture = floatArrayOf(\n')
+        if len(list_vertex_texture) > 0:
+            for i in range(len(list_face)):
+                face = list_face[i]
+                
+                v = list_vertex_texture[face.vt[0]]
+                f.write('            {:f}f, {:f}f, {:f}f, '.format(v.x, v.y, v.z))
+
+                v = list_vertex_texture[face.vt[1]]
+                f.write('{:f}f, {:f}f, {:f}f, '.format(v.x, v.y, v.z))
+
+                v = list_vertex_texture[face.vt[2]]
+                f.write('{:f}f, {:f}f, {:f}f'.format(v.x, v.y, v.z))
+
+                if i < len(list_face)-1:            
+                    f.write(',')
+                f.write('\n')
+        f.write('        )\n')
+        f.write('    }\n')
+        f.write('}\n')
 
 
 

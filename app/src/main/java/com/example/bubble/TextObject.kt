@@ -42,14 +42,9 @@ class TextObject(texFont: Bitmap) {
 
 
     // Use to access and set the view transformation
-    private var vPMatrixHandle: Int = 0
     private val mTexFont: Bitmap = texFont
-
     private var mProgram: Int
     private var mTextureHandle = IntBuffer.allocate(1)
-
-    var buff_texture = FloatArray(100 * 100 * 3)
-
 
     init {
         val vertexShader: Int = loadShader(GLES30.GL_VERTEX_SHADER, mVertexShaderCode)
@@ -65,17 +60,9 @@ class TextObject(texFont: Bitmap) {
         }
         GLES30.glUseProgram(mProgram)
 
-        // generate fake texture
-        for(i in 0 until 100*100){
-            buff_texture[i * 3 + 0] = 0.0f
-            buff_texture[i * 3 + 1] = 1.0f
-            buff_texture[i * 3 + 2] = 0.0f
-        }
-
         GLES30.glGenTextures(1, mTextureHandle)
         GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
         GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, mTextureHandle[0])
-
 
         GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_LINEAR)
         GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MAG_FILTER, GLES30.GL_LINEAR)
@@ -83,10 +70,6 @@ class TextObject(texFont: Bitmap) {
         GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_T, GLES30.GL_CLAMP_TO_EDGE);
 
         GLUtils.texImage2D(GLES30.GL_TEXTURE_2D, 0, mTexFont, 0)
-        var temp_texture = FloatBuffer.wrap(buff_texture)
-//        GLES30.glTexImage2D(GLES30.GL_TEXTURE_2D, 0, GLES30.GL_RGB32F, 100, 100, 0, GLES30.GL_RGB, GLES30.GL_FLOAT, temp_texture)
-//        GLES30.glGenerateMipmap(GLES30.GL_TEXTURE_2D)
-
 
         mTexFont.recycle()  // TODO: to check.
     }
@@ -107,7 +90,7 @@ class TextObject(texFont: Bitmap) {
         0.0f, 0.0f, 0.0f, 0.0f
     )
 
-    fun loadShader(type: Int, shaderCode: String): Int {
+    private fun loadShader(type: Int, shaderCode: String): Int {
 
         // create a vertex shader type (GLES30.GL_VERTEX_SHADER)
         // or a fragment shader type (GLES30.GL_FRAGMENT_SHADER)
@@ -124,10 +107,6 @@ class TextObject(texFont: Bitmap) {
     }
 
     private var mPositionHandle: Int = 0
-    private var mColorHandle: Int = 0
-    private var mInstancePositionsHandle: Int = 0
-    private var mOriginHandle: Int = 0
-    private var mTextureBuffer: Int = 0
     private val vertexStride: Int = COORDS_PER_VERTEX * 4 // 4 bytes per vertex
 
     fun draw(mvpMatrix: FloatArray, text:String, x:Float, y:Float, z:Float, w:Float, h:Float, color:FloatArray) {
@@ -214,7 +193,7 @@ class TextObject(texFont: Bitmap) {
         mOrigin[2] = z
 
         // get handle to vertex shader's vOrigin member
-        mOriginHandle = GLES30.glGetUniformLocation(mProgram, "vOrigin").also {
+        GLES30.glGetUniformLocation(mProgram, "vOrigin").also {
             // Set color for drawing the triangle
             GLES30.glUniform4fv(it, 1, mOrigin, 0)
         }
@@ -222,13 +201,13 @@ class TextObject(texFont: Bitmap) {
         GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
         GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, mTextureHandle[0])
 
-        mTextureBuffer = GLES30.glGetUniformLocation(mProgram, "textureObject").also {
+        GLES30.glGetUniformLocation(mProgram, "textureObject").also {
             // Set color for drawing the triangle
             GLES30.glUniform1i(it, 0)
         }
 
         // get handle to shape's transformation matrix
-        vPMatrixHandle = GLES30.glGetUniformLocation(mProgram, "uMVPMatrix").also{
+        GLES30.glGetUniformLocation(mProgram, "uMVPMatrix").also{
             GLES30.glUniformMatrix4fv(it, 1, false, mvpMatrix, 0)
         }
 
@@ -238,12 +217,12 @@ class TextObject(texFont: Bitmap) {
             GLES30.glVertexAttribPointer(it, COORDS_PER_VERTEX, GLES30.GL_FLOAT, false, vertexStride, vertexBuffer)
         }
 
-        mInstancePositionsHandle = GLES30.glGetUniformLocation(mProgram, "vInstancePositions").also {
+        GLES30.glGetUniformLocation(mProgram, "vInstancePositions").also {
             GLES30.glUniform4fv(it, mNumInstances, mInstancePositions, 0)
         }
 
         // get handle to fragment shader's vColor member
-        mColorHandle = GLES30.glGetUniformLocation(mProgram, "vInstanceColors").also {
+        GLES30.glGetUniformLocation(mProgram, "vInstanceColors").also {
             // Set color for drawing the triangle
             GLES30.glUniform4fv(it, mNumInstances, mInstanceColors, 0)
         }
@@ -253,13 +232,6 @@ class TextObject(texFont: Bitmap) {
 
         // Disable vertex array
         GLES30.glDisableVertexAttribArray(mPositionHandle)
-//        GLES30.glDisableVertexAttribArray(mInstancePositionsHandle)
-//        GLES30.glDisableVertexAttribArray(mColorHandle)
-
-    }
-
-    fun setPosition(origin: FloatArray){
-        mOrigin = origin
     }
 }
 
