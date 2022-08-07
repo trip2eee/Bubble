@@ -8,5 +8,7 @@ Development environment is as follows
 - Kotlin
 - OpenGL ES 3.0
 - Blender 2.93
+- Python
+
 
 ![screenshot](images/screenshot.jpg)

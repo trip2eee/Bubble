@@ -2,7 +2,7 @@ package com.example.bubble
 
 import android.opengl.GLES30
 
-class Particle : BaseBubble() {
+class Particle : Bubble() {
     override val mVertexCoords = floatArrayOf(
         -0.013635f, 0.483420f, -0.888825f, 0.292166f, 0.099052f, -0.961172f, -0.089589f, 0.090364f, -1.000517f,
     )

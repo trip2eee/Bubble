@@ -1,6 +1,6 @@
 package com.example.bubble
 
-class Projectile : BaseBubble() {
+class Projectile : Bubble() {
 
     override var mNumInstances: Int = 1
 
