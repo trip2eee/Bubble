@@ -71,7 +71,7 @@ class TextObject(texFont: Bitmap) {
 
         GLUtils.texImage2D(GLES30.GL_TEXTURE_2D, 0, mTexFont, 0)
 
-        mTexFont.recycle()  // TODO: to check.
+        mTexFont.recycle()  // To reclaim texture memory as soon as possible
     }
 
     var mNumInstances: Int = 1

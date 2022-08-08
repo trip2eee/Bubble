@@ -38,14 +38,14 @@ class Particle : Bubble() {
                 "uniform vec4 vInstancePositions[100];" +
                 "vec4 vInstanceAxis[1000];" +
                 "float fInstanceAngle[1000];" +
-                "vec4 vGravity = vec4(0.0, -0.005, 0.0, 0.0);" +
+                "vec4 vGravity = vec4(0.0, -0.0025, 0.0, 0.0);" +
                 "out vec4 transVertexNormal;" +
                 "out vec4 vColor;" +
                 "void main() {" +
                 "  float fInstanceID = float(gl_InstanceID); " +
                 "  float fx = fInstanceID / 10.0 * 2.0 * 3.14; " +
                 "  fInstanceAngle[gl_InstanceID] = sin(fInstanceID / 10.0 * 3.0) * 180.0; " +
-                "  float fSpeed = 0.01;  " +
+                "  float fSpeed = 0.005;  " +
                 "  vInstanceAxis[gl_InstanceID]  = vec4(cos(fx), sin(fx), sin(fx), 0.0); " +
                 "  gl_Position = uMVPMatrix * ((vPosition*vScale) + vInstancePositions[gl_InstanceID / 10] + (vInstanceAxis[gl_InstanceID]*fSpeed*fTime) + (vGravity*fTime));" +
                 "  transVertexNormal = normalize(uMVPMatrix * vec4(vNormal, 0.0));" +

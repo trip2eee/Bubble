@@ -82,7 +82,7 @@ if __name__ == '__main__':
             # vertex texture
             elif len(tokens) == 3 and tokens[0] == 'vt':
                 u = float(tokens[1])
-                v = float(tokens[2])
+                v = 1.0 - float(tokens[2])
                 vertex = Vertex2D(u, v)
                 list_vertex_texture.append(vertex)
 
@@ -97,7 +97,9 @@ if __name__ == '__main__':
 
     with open(model_class_path, 'w') as f:
 
-        f.write('class Model {\n')
+        f.write('package com.example.bubble.models\n')
+
+        f.write('class BombModel {\n')
         f.write('    companion object {\n')
         f.write('        val mVertexCoords = floatArrayOf(\n')
         for i in range(len(list_face)):

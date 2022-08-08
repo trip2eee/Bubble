@@ -30,7 +30,7 @@ class TargetingLine {
         "uniform vec4 vOrigin;" +
         "out vec4 vColor;" +
         "void main() {" +
-        "  vec4 vScale = vec4(0.04, 0.04, 0.04, 1.0);" +
+        "  vec4 vScale = vec4(0.02, 0.02, 0.02, 1.0);" +
         "  vec4 vScaledPosition = vPosition * vScale;" +
         "  gl_Position = uMVPMatrix * ((uRotationMatrix*vScaledPosition) + (uRotationMatrix*vInstancePositions[gl_InstanceID] + vOrigin));" +
         "  vColor = vInstanceColors[gl_InstanceID];" +
@@ -54,10 +54,10 @@ class TargetingLine {
         1.0f, 0.0f, 0.0f, 1.0f,
     )
     private var mInstancePositions = floatArrayOf(
+        0.0f, 0.1f, 0.0f, 0.0f,
         0.0f, 0.2f, 0.0f, 0.0f,
+        0.0f, 0.3f, 0.0f, 0.0f,
         0.0f, 0.4f, 0.0f, 0.0f,
-        0.0f, 0.6f, 0.0f, 0.0f,
-        0.0f, 0.8f, 0.0f, 0.0f,
     )
 
     private var mOrigin = floatArrayOf(

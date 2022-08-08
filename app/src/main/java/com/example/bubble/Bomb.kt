@@ -1,76 +1,76 @@
 package com.example.bubble
 
+import android.graphics.Bitmap
 import android.opengl.GLES30
+import android.opengl.GLUtils
 import android.util.Log
-import com.example.bubble.models.BubbleModel
+import com.example.bubble.models.BombModel
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
+import java.nio.IntBuffer
 
-open class Bubble {
-    // number of coordinates per vertex in this array
-    protected val COORDS_PER_VERTEX = 3
-    open val mVertexCoords = BubbleModel.mVertexCoords
-    open val mVertexNormal = BubbleModel.mVertexNormal
+class Bomb (texBomb: Bitmap) : Bubble() {
 
-    open var mNumInstances: Int = 1
+    override val mVertexCoords = BombModel.mVertexCoords
+    override val mVertexNormal = BombModel.mVertexNormal
+    private  val mVertexTexture = BombModel.mVertexTexture
+
+    private val mTexBomb: Bitmap = texBomb
+    private var mTextureHandle = IntBuffer.allocate(1)
+    protected var mTextureCoordBuffer: FloatBuffer? = null
+    protected var mTextureCoordHandle: Int = 0
+
+    override var mNumInstances: Int = 1
 
     // Set color with red, green, blue and alpha (opacity) values
-    open var mInstanceColors : MutableList<Float> = arrayListOf(
+    override var mInstanceColors : MutableList<Float> = arrayListOf(
         0.63671875f, 0.76953125f, 0.22265625f, 0.1f,
     )
-    open var mInstancePositions : MutableList<Float> = arrayListOf(
-        0.0f,  -1.0f, 0.0f, 0.0f,
+    override var mInstancePositions : MutableList<Float> = arrayListOf(
+        0.0f,  0.0f, 0.0f, 0.0f,
+        0.0f,  0.0f, 0.0f, 0.0f,
+        0.0f,  0.0f, 0.0f, 0.0f,
     )
-    open var mScale = floatArrayOf(
+    override var mScale = floatArrayOf(
         0.05f, 0.05f, 0.05f, 1.0f,
     )
 
-    open val mFragmentShaderCode =
-                "#version 300 es\n" +
-                "precision mediump float;" +
+    override val mFragmentShaderCode =
+        "#version 300 es\n" +
+                "uniform sampler2D textureObject;" +
                 "out vec4 fragColor;" +
-                "in vec4 vColor;" +
+                "in vec2 vTextureCoord;" +
                 "in vec4 transVertexNormal;" +
                 "void main() {" +
                 "  vec4 diffuseLightIntensity = vec4(1.0, 1.0, 1.0, 1.0);" +
                 "  vec4 inverseLightDirection = normalize(vec4(0.0, 0.0, 1.0, 0.0));" +
                 "  float normalDotLight = max(0.0, dot(transVertexNormal, inverseLightDirection));" +
-                "  fragColor = vColor;" +
-                "  fragColor += normalDotLight * vColor * diffuseLightIntensity;" +
+                "  vec4 vColorLight = vec4(0.5f, 0.5f, 0.5f, 1.0f);" +
+                "  fragColor = texture(textureObject, vTextureCoord);" +
+                "  fragColor += normalDotLight * vColorLight * diffuseLightIntensity;" +
                 "  clamp(fragColor, 0.0, 1.0);" +
                 "}"
 
-    open val mVertexShaderCode =
-                "#version 300 es\n" +
+    override val mVertexShaderCode =
+        "#version 300 es\n" +
                 "uniform mat4 uMVPMatrix;" +
                 "uniform vec4 vScale;" +
                 "layout(location = 0) in vec4 vPosition;" +
                 "layout(location = 1) in vec3 vNormal;" +
+                "layout(location = 2) in vec2 vTexCoord;" +
 
-                "uniform vec4 vInstanceColors[100];" +
                 "uniform vec4 vInstancePositions[100];" +
                 "out vec4 transVertexNormal;" +
-                "out vec4 vColor;" +
+                "out vec2 vTextureCoord;" +
                 "void main() {" +
 
                 "  gl_Position = uMVPMatrix * ((vPosition*vScale) + vInstancePositions[gl_InstanceID]);" +
                 "  transVertexNormal = normalize(uMVPMatrix * vec4(vNormal, 0.0));" +
-                "  vColor = vInstanceColors[gl_InstanceID];" +
+                "  vTextureCoord = vTexCoord;" +
                 "}"
 
-    protected var mProgram: Int = 0
-
-    protected var mVertexBuffer: FloatBuffer? = null
-    protected var mNormalBuffer: FloatBuffer? = null
-
-    protected var mPositionHandle: Int = 0
-    protected var mVertexNormalHandle: Int = 0
-
-    protected val mVertexStride: Int = COORDS_PER_VERTEX * 4 // 4 bytes per vertex
-    protected var mVertexCount: Int = 0
-
-    open fun initialize() {
+    override fun initialize() {
         val vertexShader: Int = loadShader(GLES30.GL_VERTEX_SHADER, mVertexShaderCode)
         val fragmentShader: Int = loadShader(GLES30.GL_FRAGMENT_SHADER, mFragmentShaderCode)
 
@@ -83,9 +83,23 @@ open class Bubble {
             GLES30.glLinkProgram(it)
         }
 
+        GLES30.glUseProgram(mProgram)
+
+        GLES30.glGenTextures(1, mTextureHandle)
+        GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
+        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, mTextureHandle[0])
+
+        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_LINEAR)
+        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MAG_FILTER, GLES30.GL_LINEAR)
+        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_S, GLES30.GL_CLAMP_TO_EDGE);
+        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_T, GLES30.GL_CLAMP_TO_EDGE);
+
+        GLUtils.texImage2D(GLES30.GL_TEXTURE_2D, 0, mTexBomb, 0)
+
+        mTexBomb.recycle()  // To reclaim texture memory as soon as possible
 
         mVertexBuffer =
-            // (number of coordinate values * 4 bytes per float)
+                // (number of coordinate values * 4 bytes per float)
             ByteBuffer.allocateDirect(mVertexCoords.size * 4).run {
                 // use the device hardware's native byte order
                 order(ByteOrder.nativeOrder())
@@ -97,7 +111,7 @@ open class Bubble {
             }
 
         mNormalBuffer =
-            // (number of coordinate values * 4 bytes per float)
+                // (number of coordinate values * 4 bytes per float)
             ByteBuffer.allocateDirect(mVertexNormal.size * 4).run {
                 // use the device hardware's native byte order
                 order(ByteOrder.nativeOrder())
@@ -108,11 +122,21 @@ open class Bubble {
                 }
             }
 
+        mTextureCoordBuffer = ByteBuffer.allocateDirect(mVertexTexture.size * 4).run {
+                // use the device hardware's native byte order
+                order(ByteOrder.nativeOrder())
+                // create a floating point buffer from the ByteBuffer
+                asFloatBuffer().apply {
+                    put(mVertexTexture)		// add the coordinates to the FloatBuffer
+                    position(0)	// set the buffer to read the first coordinate
+                }
+            }
+
         mVertexCount = mVertexCoords.size / COORDS_PER_VERTEX
 
     }
 
-    open fun draw(mvpMatrix: FloatArray, scale: Float) {
+    override fun draw(mvpMatrix: FloatArray, scale: Float) {
 
         // Add program to OpenGL ES environment
         GLES30.glUseProgram(mProgram)
@@ -138,16 +162,21 @@ open class Bubble {
             GLES30.glVertexAttribPointer(it, COORDS_PER_VERTEX, GLES30.GL_FLOAT, false, 0, mNormalBuffer)
         }
 
-
-        // get handle to fragment shader's vColor member
-        GLES30.glGetUniformLocation(mProgram, "vInstanceColors").also {
-            // Set color for drawing the triangle
-            GLES30.glUniform4fv(it, mNumInstances, mInstanceColors.toFloatArray(), 0)
+        mTextureCoordHandle = GLES30.glGetAttribLocation(mProgram, "vTexCoord").also {
+            GLES30.glEnableVertexAttribArray(it)
+            GLES30.glVertexAttribPointer(it, 2, GLES30.GL_FLOAT, false, 0, mTextureCoordBuffer)
         }
 
         mScale = floatArrayOf(scale, scale, scale, 1.0f)
         GLES30.glGetUniformLocation(mProgram, "vScale").also {
             GLES30.glUniform4fv(it, 1, mScale, 0)
+        }
+
+        GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
+        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, mTextureHandle[0])
+        GLES30.glGetUniformLocation(mProgram, "textureObject").also {
+            // Set color for drawing the triangle
+            GLES30.glUniform1i(it, 0)
         }
 
         // Draw the triangle
@@ -156,6 +185,7 @@ open class Bubble {
         // Disable vertex array
         GLES30.glDisableVertexAttribArray(mPositionHandle)
         GLES30.glDisableVertexAttribArray(mVertexNormalHandle)
+        GLES30.glDisableVertexAttribArray(mTextureCoordHandle)
     }
 
     private fun loadShader(type: Int, shaderCode: String): Int {
@@ -173,5 +203,4 @@ open class Bubble {
             Log.d("[Shader]", log)
         }
     }
-
 }
